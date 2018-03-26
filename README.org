@@ -1,0 +1,98 @@
+#+TITLE: __VA_ARGS__ counting and iteration macros
+
+* Table of Contents                      :TOC_4_gh:noexport:
+- [[#description][Description]]
+- [[#use][Use]]
+  - [[#macros][Macros]]
+    - [[#va_eachtf-][=VA_EACH(TF, ...)=]]
+    - [[#va_idx_eachtf-][=VA_IDX_EACH(TF, ...)=]]
+    - [[#va_fix_idx_eachtf-fixed_arg-][=VA_FIX_IDX_EACH(TF, FIXED_ARG, ...)=]]
+  - [[#generator][Generator]]
+- [[#implementation--references][Implementation / references]]
+
+* Description
+  Some C macros (and associated code generators) to count and iterate over variadic macro arguments.
+
+  The included =vaiter64.h= includes macros to handle up to 64 arguments. Behaviour beyond this is undefined.
+
+
+* Use
+
+** Macros
+
+   #+BEGIN_NOTE
+   This family of macros is intended to allow the transformation of a =__VA_ARGS__= list into a single C expression OR one C expression per argument.
+   In the latter case, the transformation macro should include the concluding semi-colon.
+   #+END_NOTE
+
+   #+BEGIN_NOTE
+   The two indexed macro variants use 0-based indexing.
+   #+END_NOTE
+
+*** =VA_EACH(TF, ...)=
+    Iterates over a set of variadic macro arguments and applies a provided transformation macro (=TF(ARG)=) to each argument =ARG=.
+
+*** =VA_IDX_EACH(TF, ...)=
+    Iterates over a set of variadic macro arguments and applies a provided transformation macro =TF(ARG, IDX)= to each argument =ARG= and index =IDX=.
+
+*** =VA_FIX_IDX_EACH(TF, FIXED_ARG, ...)=
+    Iterates over a set of variadic macro arguments and applies a provided transformation macro =TF(FIXED_ARG, ARG, IDX)= to each argument =ARG= and index =IDX=.
+    The fixed argument is also passed to the transformation function. I use it when mocking dependencies (using ceedling and fake function framework)
+    for shorthand verification of function calls, i.e.
+
+    #+BEGIN_SRC c
+      TEST_ASSERT_CALLED_WITH(RgbPixel_render, &rendered_pixel, TEST_COLOUR, TEST_INTENSITY);
+    #+END_SRC
+
+    ... rather than ...
+    #+BEGIN_SRC c
+      TEST_ASSERT_EQUAL(1, RgbPixel_render_fake.call_count);
+      TEST_ASSERT_EQUAL(&rendered_pixel, RgbPixel_render_fake.arg0_val);
+      TEST_ASSERT_EQUAL(TEST_COLOUR, RgbPixel_render_fake.arg1_val);
+      TEST_ASSERT_EQUAL(TEST_INTENSITY, RgbPixel_render_fake.arg2_val);
+    #+END_SRC
+
+    ... which is facilitated by ....
+    #+BEGIN_SRC c
+      #define _FFF_VERIFY_PARAMETER_(FN, VAL, IDX) TEST_ASSERT_EQUAL(VAL, FN##_fake.arg##IDX##_val);
+      #define TEST_ASSERT_CALLED_WITH(FN, ...)                    \
+        TEST_ASSERT_CALLED(FN);                                   \
+        VA_FIX_IDX_EACH(_FFF_VERIFY_PARAMETER_, FN, __VA_ARGS__)
+    #+END_SRC
+
+
+** Generator
+
+   This repository includes a pre-generated header to handle up to 64 =__VA_ARGS__=. A header to handle an arbitrary number of arguments may be generated
+   using the included generator script (written in ruby), as follows:
+
+   #+BEGIN_SRC sh
+     ruby vaiter_generator.rb <NARGS>
+   #+END_SRC
+
+   e.g. for up to 128 args
+   #+BEGIN_SRC sh
+     ruby vaiter_generator.rb 128
+   #+END_SRC
+
+   When called without any arguments, the default value of 64 will be used.
+
+   The generator will create a file using the pattern =vaiter#{NARGS}.h=, i.e. the 128-argument example above will create =vaiter128.h=
+
+* Implementation / references
+
+  =VA_EACH= uses a recursive implementation I encountered in a blog post by Daniel Hardman here:
+  https://codecraft.co/2014/11/25/variadic-macros-tricks/
+
+  =VA_IDX_EACH= and =VA_FIX_IDX_EACH= extend a non-recursive implementation found in an anonymous blog post here:
+  http://ptspts.blogspot.ie/2013/11/how-to-apply-macro-to-all-arguments-of.html
+
+  My attempt to use the recursive implementation for the latter variants gives reversed argument indices -- i.e.
+  given 3 arguments ={ARG0, ARG1, ARG2}=, the transformation macro will be called with
+  #+BEGIN_SRC c
+TF(ARG0, 2)
+TF(ARG1, 1)
+TF(ARG2, 0)
+#+END_SRC
+
+  There's probably an obvious way to solve this problem - PR welcome :)
