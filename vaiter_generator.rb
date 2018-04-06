@@ -94,6 +94,20 @@ macros << "VA_FIX_IDX_EACH(TF, FARG, ...) _VA_FIX_IDX_EACH_H2(TF, FARG, VA_NARGS
 
 macros << "VA_EACH_WITH_INDEX_AND_FIXED_ARG(...) VA_FIX_IDX_EACH(...)" #alias
 
+
+# VA_2FIX_IDX_EACH
+macros << "__VA_2FIX_IDX_APPLY_0(TF, ARG, dummy)"
+(1..max_arg_count).each do |arg_count|
+  arg_indices = (0..arg_count-1)
+  arg_ids = arg_indices.map{ |aidx| "_#{aidx}"}
+  macro_signature = "__VA_2FIX_IDX_APPLY_#{arg_count}(TF, FARG1, FARG2, #{arg_ids.join(', ')})"
+  macro_body = arg_indices.map { |aidx| "TF(FARG1, FARG2, _#{aidx}, #{aidx})" }.join(' ')
+  macros << "#{macro_signature} #{macro_body}"
+end
+macros << "_VA_2FIX_IDX_EACH_H3(TF, FARG1, FARG2, N, ...) __VA_2FIX_IDX_APPLY_##N(TF, FARG1, FARG2, __VA_ARGS__)"
+macros << "_VA_2FIX_IDX_EACH_H2(TF, FARG1, FARG2, N, ...) _VA_2FIX_IDX_EACH_H3(TF, FARG1, FARG2, N, __VA_ARGS__)"
+macros << "VA_2FIX_IDX_EACH(TF, FARG1, FARG2, ...) _VA_2FIX_IDX_EACH_H2(TF, FARG1, FARG2, VA_NARGS(__VA_ARGS__), __VA_ARGS__)"
+
 File.open("vaiter#{max_arg_count}.h", 'w') do |f|
   f.puts <<-EOF
 /**

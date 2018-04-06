@@ -4,17 +4,27 @@
 - [[#description][Description]]
 - [[#use][Use]]
   - [[#macros][Macros]]
-    - [[#va_eachtf-][=VA_EACH(TF, ...)=]]
-    - [[#va_idx_eachtf-][=VA_IDX_EACH(TF, ...)=]]
-    - [[#va_fix_idx_eachtf-fixed_arg-][=VA_FIX_IDX_EACH(TF, FIXED_ARG, ...)=]]
+    - [[#va_eachtf-][VA_EACH(TF, ...)]]
+    - [[#va_idx_eachtf-][VA_IDX_EACH(TF, ...)]]
+    - [[#va_fix_idx_eachtf-fixed_arg-][VA_FIX_IDX_EACH(TF, FIXED_ARG, ...)]]
+    - [[#va_2fix_idx_eachtf-fixed_arg1-fixed_arg2-][VA_2FIX_IDX_EACH(TF, FIXED_ARG1, FIXED_ARG2, ...)]]
   - [[#generator][Generator]]
+  - [[#use-example----autogeneration-of-string-descriptors-for-an-enum-type][Use example -- autogeneration of string descriptors for an enum type]]
+    - [[#my_tagged_enumh][my_tagged_enum.h]]
+      - [[#untyped-enum][Untyped enum]]
+      - [[#typed-enum][Typed enum]]
+    - [[#my_tagged_enumc][my_tagged_enum.c]]
+      - [[#automatic-tag-generation][Automatic tag generation]]
+      - [[#custom-tag-definition][Custom tag definition]]
 - [[#implementation--references][Implementation / references]]
 
 * Description
-  Some C macros (and associated code generators) to count and iterate over variadic macro arguments.
+  Some [[file:vaiter64.h][C macros]] (and an associated [[file:vaiter_generator.rb][code generator]]) to count and iterate over variadic macro arguments.
+
+  A [[file:enum.h][set of macros]] to facilitate auto-generation of string representations of members of an enum type
 
   The included =vaiter64.h= includes macros to handle up to 64 arguments. Behaviour beyond this is undefined.
-
+  The Ruby code generator script can be used to generate a header supporting larger numbers of variadic arguments if required.
 
 * Use
 
@@ -29,13 +39,13 @@
    The two indexed macro variants use 0-based indexing.
    #+END_NOTE
 
-*** =VA_EACH(TF, ...)=
+*** VA_EACH(TF, ...)
     Iterates over a set of variadic macro arguments and applies a provided transformation macro (=TF(ARG)=) to each argument =ARG=.
 
-*** =VA_IDX_EACH(TF, ...)=
+*** VA_IDX_EACH(TF, ...)
     Iterates over a set of variadic macro arguments and applies a provided transformation macro =TF(ARG, IDX)= to each argument =ARG= and index =IDX=.
 
-*** =VA_FIX_IDX_EACH(TF, FIXED_ARG, ...)=
+*** VA_FIX_IDX_EACH(TF, FIXED_ARG, ...)
     Iterates over a set of variadic macro arguments and applies a provided transformation macro =TF(FIXED_ARG, ARG, IDX)= to each argument =ARG= and index =IDX=.
     The fixed argument is also passed to the transformation function. I use it when mocking dependencies (using ceedling and fake function framework)
     for shorthand verification of function calls, i.e.
@@ -60,6 +70,8 @@
         VA_FIX_IDX_EACH(_FFF_VERIFY_PARAMETER_, FN, __VA_ARGS__)
     #+END_SRC
 
+*** VA_2FIX_IDX_EACH(TF, FIXED_ARG1, FIXED_ARG2, ...)
+    As [[VA_FIX_IDX_EACH]], but for two fixed parameters. Developed to facilitate some other mock verification additions to the fake function framework (subject of a current PR), but may have other applications.
 
 ** Generator
 
@@ -79,6 +91,128 @@
 
    The generator will create a file using the pattern =vaiter#{NARGS}.h=, i.e. the 128-argument example above will create =vaiter128.h=
 
+** Use example -- autogeneration of string descriptors for an enum type
+
+   The file [[file:enum.h][enum.h]] uses =VA_EACH= to support autogeneration of textual descriptions of enum members.
+   This saves some repetition and eliminates the risk of forgetting to update the tag when adding/re-arranging members.
+
+*** my_tagged_enum.h
+
+**** Untyped enum
+
+    #+BEGIN_SRC c
+      #include "enum.h"
+      #define FavouritePiperIds \
+        WILLIE_CLANCY, \
+        SEAMUS_ENNIS, \
+        TOMMY_RECK
+
+      TAGGED_ENUM(FavouritePiper);
+    #+END_SRC
+
+    ... which expands to ...
+
+    #+BEGIN_SRC c
+      #include "enum.h"
+      #define FavouritePiperIds \
+        WILLIE_CLANCY, \
+        SEAMUS_ENNIS, \
+        TOMMY_RECK
+
+      enum FavouritePiper {
+        WILLIE_CLANCY,
+        SEAMUS_ENNIS,
+        TOMMY_RECK,
+        FavouritePiper_COUNT
+      };
+
+      char const * FavouritePiper_asCString(int id);
+    #+END_SRC
+
+**** Typed enum
+
+    #+BEGIN_SRC c
+      #include "enum.h"
+      #define FavouritePiperIds \
+        WILLIE_CLANCY, \
+        SEAMUS_ENNIS, \
+        TOMMY_RECK
+
+      TAGGED_ENUM_TYPE(FavouritePiper);
+    #+END_SRC
+
+    ... which expands to ...
+
+    #+BEGIN_SRC c
+      #include "enum.h"
+      #define FavouritePiperIds \
+        WILLIE_CLANCY, \
+        SEAMUS_ENNIS, \
+        TOMMY_RECK
+
+      typedef enum {
+        WILLIE_CLANCY,
+        SEAMUS_ENNIS,
+        TOMMY_RECK,
+        FavouritePiper_COUNT
+      } FavouritePiper;
+
+      char const * FavouritePiper_asCString(int id);
+    #+END_SRC
+
+*** my_tagged_enum.c
+
+**** Automatic tag generation
+     (This uses the =VA_EACH= macro)
+
+    #+BEGIN_SRC c
+      #include "my_tagged_enum.h"
+
+      ENUM_DESCRIBE(FavouritePiper);
+    #+END_SRC
+
+    ... which expands to ...
+
+    #+BEGIN_SRC c
+      #include "my_tagged_enum.h"
+
+      static char const * FavouritePiper_TAGS[] = {
+        "WILLIE_CLANCY",
+        "SEAMUS_ENNIS",
+        "TOMMY_RECK",
+      };
+
+      char const * FavouritePiper_asCString(int id) { return id < FavouritePiper_COUNT ? FavouritePiper_TAGS[id] : "UNDEFINED"; }
+    #+END_SRC
+
+**** Custom tag definition
+   This sacrifices the protection against re-arrangement of members, but should at least ensure that your compiler warns you if the number of tags doesn't match the number of enum members.
+
+    #+BEGIN_SRC c
+      #include "my_tagged_enum.h"
+
+      ENUM_DESCRIBE_EXPLICIT(FavouritePiper,
+                       "Willie Clancy",
+                       "Seamus Ennis",
+                       "Tommy Reck"
+        );
+    #+END_SRC
+
+    ... which expands to ...
+
+    #+BEGIN_SRC c
+      #include "my_tagged_enum.h"
+
+      static char const * FavouritePiper_TAGS[] = {
+        "Willie Clancy",
+        "Seamus Ennis",
+        "Tommy Reck"
+      };
+
+      char const * FavouritePiper_asCString(int id) { return id < FavouritePiper_COUNT ? FavouritePiper_TAGS[id] : "UNDEFINED"; }
+    #+END_SRC
+
+
 * Implementation / references
 
   =VA_EACH= uses a recursive implementation I encountered in a blog post by Daniel Hardman here:
@@ -90,9 +224,9 @@
   My attempt to use the recursive implementation for the latter variants gives reversed argument indices -- i.e.
   given 3 arguments ={ARG0, ARG1, ARG2}=, the transformation macro will be called with
   #+BEGIN_SRC c
-TF(ARG0, 2)
-TF(ARG1, 1)
-TF(ARG2, 0)
-#+END_SRC
+    TF(ARG0, 2)
+    TF(ARG1, 1)
+    TF(ARG2, 0)
+  #+END_SRC
 
   There's probably an obvious way to solve this problem - PR welcome :)
