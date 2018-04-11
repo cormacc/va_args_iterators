@@ -4,10 +4,10 @@
 - [[#description][Description]]
 - [[#use][Use]]
   - [[#macros][Macros]]
-    - [[#va_eachtf-][VA_EACH(TF, ...)]]
-    - [[#va_idx_eachtf-][VA_IDX_EACH(TF, ...)]]
-    - [[#va_fix_idx_eachtf-fixed_arg-][VA_FIX_IDX_EACH(TF, FIXED_ARG, ...)]]
-    - [[#va_2fix_idx_eachtf-fixed_arg1-fixed_arg2-][VA_2FIX_IDX_EACH(TF, FIXED_ARG1, FIXED_ARG2, ...)]]
+    - [[#pp_eachtf-][PP_EACH(TF, ...)]]
+    - [[#pp_each_idxtf-][PP_EACH_IDX(TF, ...)]]
+    - [[#pp_1par_each_idxtf-fixed_arg-][PP_1PAR_EACH_IDX(TF, FIXED_ARG, ...)]]
+    - [[#pp_2par_each_idxtf-fixed_arg1-fixed_arg2-][PP_2PAR_EACH_IDX(TF, FIXED_ARG1, FIXED_ARG2, ...)]]
   - [[#generator][Generator]]
   - [[#use-example----autogeneration-of-string-descriptors-for-an-enum-type][Use example -- autogeneration of string descriptors for an enum type]]
     - [[#my_tagged_enumh][my_tagged_enum.h]]
@@ -19,12 +19,15 @@
 - [[#implementation--references][Implementation / references]]
 
 * Description
-  Some [[file:vaiter64.h][C macros]] (and an associated [[file:vaiter_generator.rb][code generator]]) to count and iterate over variadic macro arguments.
+  Some [[file:pp_iter.h][C macros]] (and an associated [[file:vaiter_generator.rb][code generator]]) to count and iterate over variadic macro arguments.
 
   A [[file:enum.h][set of macros]] to facilitate auto-generation of string representations of members of an enum type
 
-  The included =vaiter64.h= includes macros to handle up to 64 arguments. Behaviour beyond this is undefined.
+  The included =pp_iter.h= includes macros to handle up to 64 arguments. Behaviour beyond this is undefined.
   The Ruby code generator script can be used to generate a header supporting larger numbers of variadic arguments if required.
+  The C99 and C11 standard specifies that a compiler must handle a program with a macro with 127 arguments, so behaviour beyond this limit will be undefined.
+  In theory, this only guarantees operation of the counting macros up to about 63 arguments, at least using this implementation.
+
 
 * Use
 
@@ -39,13 +42,13 @@
    The two indexed macro variants use 0-based indexing.
    #+END_NOTE
 
-*** VA_EACH(TF, ...)
+*** PP_EACH(TF, ...)
     Iterates over a set of variadic macro arguments and applies a provided transformation macro (=TF(ARG)=) to each argument =ARG=.
 
-*** VA_IDX_EACH(TF, ...)
+*** PP_EACH_IDX(TF, ...)
     Iterates over a set of variadic macro arguments and applies a provided transformation macro =TF(ARG, IDX)= to each argument =ARG= and index =IDX=.
 
-*** VA_FIX_IDX_EACH(TF, FIXED_ARG, ...)
+*** PP_1PAR_EACH_IDX(TF, FIXED_ARG, ...)
     Iterates over a set of variadic macro arguments and applies a provided transformation macro =TF(FIXED_ARG, ARG, IDX)= to each argument =ARG= and index =IDX=.
     The fixed argument is also passed to the transformation function. I use it when mocking dependencies (using ceedling and fake function framework)
     for shorthand verification of function calls, i.e.
@@ -67,11 +70,11 @@
       #define _FFF_VERIFY_PARAMETER_(FN, VAL, IDX) TEST_ASSERT_EQUAL(VAL, FN##_fake.arg##IDX##_val);
       #define TEST_ASSERT_CALLED_WITH(FN, ...)                    \
         TEST_ASSERT_CALLED(FN);                                   \
-        VA_FIX_IDX_EACH(_FFF_VERIFY_PARAMETER_, FN, __VA_ARGS__)
+        PP_1PAR_EACH_IDX(_FFF_VERIFY_PARAMETER_, FN, __VA_ARGS__)
     #+END_SRC
 
-*** VA_2FIX_IDX_EACH(TF, FIXED_ARG1, FIXED_ARG2, ...)
-    As [[VA_FIX_IDX_EACH]], but for two fixed parameters. Developed to facilitate some other mock verification additions to the fake function framework (subject of a current PR), but may have other applications.
+*** PP_2PAR_EACH_IDX(TF, FIXED_ARG1, FIXED_ARG2, ...)
+    As [[PP_1PAR_EACH_IDX]], but for two fixed parameters. Developed to facilitate some other mock verification additions to the fake function framework (subject of a current PR), but may have other applications.
 
 ** Generator
 
@@ -79,21 +82,40 @@
    using the included generator script (written in ruby), as follows:
 
    #+BEGIN_SRC sh
-     ruby vaiter_generator.rb <NARGS>
+     ruby pp_iterators.rb <NARGS>
    #+END_SRC
 
-   e.g. for up to 128 args
+   By default, the script just prints the header content to the console, so you'll want to redirect to file.
+
+   e.g. for up to 127 args
    #+BEGIN_SRC sh
-     ruby vaiter_generator.rb 128
+     ruby pp_iterators.rb 127 > pp_iter.h
    #+END_SRC
 
    When called without any arguments, the default value of 64 will be used.
 
-   The generator will create a file using the pattern =vaiter#{NARGS}.h=, i.e. the 128-argument example above will create =vaiter128.h=
+   The generator provides a set of methods which may be used in 3rd party code generators.
+   These support generation of the macros described above as well as variants (e.g. macro sets with an
+   arbitrary number of fixed args, and some variants of the argument counting macros).
+
+   The argument counting macros use some common definitions, or see the [[https://github.com/meekrosoft/fff][fake function framework]] for a usage example.
+
+   #+BEGIN_SRC ruby
+     ppi = PPIterators.new(127);
+     puts <<~EOH
+     # Define the counting macros PP_NARG and PP_NARG_MINUS2_N
+     #{ppi.narg_common}
+     #{ppi.narg}
+     #{ppi.narg_minus(2)}
+
+     # Define PP_EACH(...)
+     #{ppi.each}
+     EOH
+   #+END_SRC
 
 ** Use example -- autogeneration of string descriptors for an enum type
 
-   The file [[file:enum.h][enum.h]] uses =VA_EACH= to support autogeneration of textual descriptions of enum members.
+   The file [[file:enum.h][enum.h]] uses =PP_EACH= to support autogeneration of textual descriptions of enum members.
    This saves some repetition and eliminates the risk of forgetting to update the tag when adding/re-arranging members.
 
 *** my_tagged_enum.h
@@ -163,7 +185,7 @@
 *** my_tagged_enum.c
 
 **** Automatic tag generation
-     (This uses the =VA_EACH= macro)
+     (This uses the =PP_EACH= macro)
 
     #+BEGIN_SRC c
       #include "my_tagged_enum.h"
@@ -215,10 +237,10 @@
 
 * Implementation / references
 
-  =VA_EACH= uses a recursive implementation I encountered in a blog post by Daniel Hardman here:
+  =PP_EACH= uses a recursive implementation I encountered in a blog post by Daniel Hardman here:
   https://codecraft.co/2014/11/25/variadic-macros-tricks/
 
-  =VA_IDX_EACH= and =VA_FIX_IDX_EACH= extend a non-recursive implementation found in an anonymous blog post here:
+  =PP_EACH_IDX= and =PP_1PAR_EACH_IDX= extend a non-recursive implementation found in an anonymous blog post here:
   http://ptspts.blogspot.ie/2013/11/how-to-apply-macro-to-all-arguments-of.html
 
   My attempt to use the recursive implementation for the latter variants gives reversed argument indices -- i.e.
@@ -230,3 +252,6 @@
   #+END_SRC
 
   There's probably an obvious way to solve this problem - PR welcome :)
+
+  Or there's another recursive approach described here that looks interesting:
+  http://saadahmad.ca/cc-preprocessor-metaprogramming-2/

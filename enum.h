@@ -23,10 +23,10 @@
  * The source file will define an array of strings using the defined MyEnumIds and
  * the implementation of ~char const * MyEnum_asCString(int)~
  *
- * N.B. Tag generation uses VA_ARGS counting and iteration macros defined in "vaiter64.h"
+ * N.B. Tag generation uses VA_ARGS counting and iteration macros defined in "pp_iter.h"
  * See that file for a link to a generator script if higher limit is required.
  * That'll take precedence over this include, as they use the same guard definition -- i.e
- * #include "vaiter512.h"
+ * #include "pp_iter512.h"
  * #include "enum.h"
  */
 
@@ -40,7 +40,7 @@ extern "C" {
 // ----------------------------------------------------------------------------
 // Includes
 // ----------------------------------------------------------------------------
-#include "vaiter64.h"
+#include "pp_iter.h"
 
 // ----------------------------------------------------------------------------
 // Macros
@@ -85,7 +85,7 @@ extern "C" {
   _ENUM_DESCRIPTOR_DECLARATION_(NAME)
 
 // Indirection necessary to expand NAME##Tags
-#define _ENUM_TAGS_AUTO_(IDS) VA_EACH(_ENUM_TAG_, IDS)
+#define _ENUM_TAGS_AUTO_(IDS) PP_EACH(_ENUM_TAG_, IDS)
 #define ENUM_TAGS_AUTO(NAME)                         \
   static char const * NAME##_TAGS[] = {         \
     _ENUM_TAGS_AUTO_(NAME##Tags)                      \
