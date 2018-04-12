@@ -10,19 +10,39 @@
 require 'date'
 
 class PPIterators
+
+  class CFile
+    INDENT = 2
+    class << self
+
+      def indent(content)
+        " " * INDENT + content.gsub("\n","\n  ")
+      end
+
+      def include_guard(name, content)
+        "#ifndef #{name}\n" + indent(content) + "\n#endif //#{name}\n"
+
+      end
+
+      def wrap_macro_body(m)
+        m.empty? ? m : "\#define #{m}"
+      end
+
+      def wrap_macro_bodies(macros)
+        macros.map{ |m| wrap_macro_body(m) }.join("\n")
+      end
+
+      def wrap_macro_set(guard_name, macros)
+        include_guard(guard_name, wrap_macro_bodies(macros))
+      end
+    end
+  end
+
   MAX_ARG_COUNT_DEFAULT = 64
   attr_reader :max_arg_count
-  def initialize(n = MAX_ARG_COUNT_DEFAULT, use_gcc_extensions: false)
+  def initialize(n = MAX_ARG_COUNT_DEFAULT, use_gcc_extensions: true)
     @gcc = use_gcc_extensions
     @max_arg_count = n
-  end
-
-  def self.wrap_macro_bodies(macros)
-    macros.map{ |m| m.empty? ? m : "\#define #{m}" }.join("\n")
-  end
-
-  def wrap_macro_bodies(macros)
-    self.class.wrap_macro_bodies(macros)
   end
 
   def arg_seq(reverse: false, first: 0, last: @max_arg_count, prefix: '', sep:', ')
@@ -32,11 +52,15 @@ class PPIterators
   end
 
   def narg_common
-    wrap_macro_bodies(
+    CFile::wrap_macro_set('PP_UTIL',
       [
         # Fix for MSVC expansion order (nicked from fff project)
         "EXPAND(x) x",
-        "PP_RSEQ_N() #{arg_seq(reverse: true)}",
+        "HEAD(FIRST, ...) FIRST",
+        "TAIL(FIRST, ...) __VA_ARGS__",
+        "CAT(A, B) _CAT(A,B)",
+        "_CAT(A, B) A ## B",
+        "PP_RSEQ_N() #{arg_seq(reverse: true)}"
       ]
     )
   end
@@ -52,7 +76,7 @@ class PPIterators
 
   def narg_minus(m)
     suffix = m>0 ? "_MINUS#{m}" : ''
-    wrap_macro_bodies(
+    CFile::wrap_macro_set("PP_NARG#{suffix}",
       [
         "PP_NARG#{suffix}(...)  EXPAND(PP_ARG#{suffix}_N(#{'_0, ##' if @gcc}__VA_ARGS__, PP_RSEQ_N()))",
         "PP_ARG#{suffix}_N(...) EXPAND(_PP_ARG#{suffix}_N(__VA_ARGS__))",
@@ -62,7 +86,7 @@ class PPIterators
   end
 
   def each
-    wrap_macro_bodies(
+    CFile::wrap_macro_set('PP_EACH',
       [
         "PP_EACH(TF, ...) _PP_EACH(TF, PP_NARG(__VA_ARGS__), __VA_ARGS__)",
         "_PP_EACH(TF, N, ...) __PP_EACH(TF, N, __VA_ARGS__)",
@@ -75,7 +99,7 @@ class PPIterators
   end
 
   def each_with_index
-    wrap_macro_bodies(
+    CFile::wrap_macro_set('PP_EACH_IDX',
       [
         "PP_EACH_IDX(TF, ...) _PP_EACH_IDX(TF, PP_NARG(__VA_ARGS__), __VA_ARGS__)",
         "_PP_EACH_IDX(TF, N, ...) __PP_EACH_IDX(TF, N, __VA_ARGS__)",
@@ -94,7 +118,7 @@ class PPIterators
 
   def parameterised_each_with_index(n)
     fargs = (1..n).map { |aidx| "P#{aidx}"}.join(", ")
-    wrap_macro_bodies(
+    CFile::wrap_macro_set("PP_#{n}PAR_EACH_IDX",
       [
         "PP_#{n}PAR_EACH_IDX(TF, #{fargs}, ...) _PP_#{n}PAR_EACH_IDX(TF, #{fargs}, PP_NARG(__VA_ARGS__), __VA_ARGS__)",
         "_PP_#{n}PAR_EACH_IDX(TF, #{fargs}, N, ...) __PP_#{n}PAR_EACH_IDX(TF, #{fargs}, N, __VA_ARGS__)",
