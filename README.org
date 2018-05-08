@@ -6,8 +6,8 @@
   - [[#macros][Macros]]
     - [[#pp_eachtf-][PP_EACH(TF, ...)]]
     - [[#pp_each_idxtf-][PP_EACH_IDX(TF, ...)]]
-    - [[#pp_1par_each_idxtf-fixed_arg-][PP_1PAR_EACH_IDX(TF, FIXED_ARG, ...)]]
-    - [[#pp_2par_each_idxtf-fixed_arg1-fixed_arg2-][PP_2PAR_EACH_IDX(TF, FIXED_ARG1, FIXED_ARG2, ...)]]
+    - [[#pp_par_each_idxtf-fixed_args-][PP_PAR_EACH_IDX(TF, (FIXED_ARGS), ...)]]
+    - [[#deprecated-macros][Deprecated macros]]
   - [[#generator][Generator]]
   - [[#use-example----autogeneration-of-string-descriptors-for-an-enum-type][Use example -- autogeneration of string descriptors for an enum type]]
     - [[#my_tagged_enumh][my_tagged_enum.h]]
@@ -48,9 +48,14 @@
 *** PP_EACH_IDX(TF, ...)
     Iterates over a set of variadic macro arguments and applies a provided transformation macro =TF(ARG, IDX)= to each argument =ARG= and index =IDX=.
 
-*** PP_1PAR_EACH_IDX(TF, FIXED_ARG, ...)
-    Iterates over a set of variadic macro arguments and applies a provided transformation macro =TF(FIXED_ARG, ARG, IDX)= to each argument =ARG= and index =IDX=.
-    The fixed argument is also passed to the transformation function. I use it when mocking dependencies (using ceedling and fake function framework)
+*** PP_PAR_EACH_IDX(TF, (FIXED_ARGS), ...)
+    Iterates over a set of variadic macro arguments and applies a provided transformation macro =TF(FIXED_ARG1, [...additional fixed args,], ARG, IDX)= to each argument =ARG= and index =IDX=.
+
+    #+BEGIN_NOTES
+    Any number of fixed args may be used, however the fixed args MUST be parenthesised in the macro call. I.e. =PP_PAR_EACH_IDX(TF, (FIXED_ARG1), VAR_ARG_1, VAR_ARG_2)= will work, but =PP_PAR_EACH_IDX(TF, FIXED_ARG1, VAR_ARG_1, VAR_ARG_2)= won't.
+    #+END_NOTES
+
+    I use it when mocking dependencies (using ceedling and fake function framework)
     for shorthand verification of function calls, i.e.
 
     #+BEGIN_SRC c
@@ -70,11 +75,19 @@
       #define _FFF_VERIFY_PARAMETER_(FN, VAL, IDX) TEST_ASSERT_EQUAL(VAL, FN##_fake.arg##IDX##_val);
       #define TEST_ASSERT_CALLED_WITH(FN, ...)                    \
         TEST_ASSERT_CALLED(FN);                                   \
-        PP_1PAR_EACH_IDX(_FFF_VERIFY_PARAMETER_, FN, __VA_ARGS__)
+        PP_PAR_EACH_IDX(_FFF_VERIFY_PARAMETER_, (FN), __VA_ARGS__)
     #+END_SRC
 
-*** PP_2PAR_EACH_IDX(TF, FIXED_ARG1, FIXED_ARG2, ...)
-    As [[PP_1PAR_EACH_IDX]], but for two fixed parameters. Developed to facilitate some other mock verification additions to the fake function framework (subject of a current PR), but may have other applications.
+*** Deprecated macros
+
+    The original implementation required separate parameterised macro sets to be defined for a given number of fixed arguments, but the adoption of nested bracing has allowed them to be eliminated.
+
+    | Deprecated syntax                       | New syntax                              |
+    |-----------------------------------------+------------------------------------------|
+    | PP_1PAR_EACH_IDX(TF, FARG, ...)         | PP_PAR_EACH_IDX(TF, (FARG), ...)         |
+    | PP_2PAR_EACH_IDX(TF, FARG1, FARG2, ...) | PP_PAR_EACH_IDX(TF, (FARG1, FARG2), ...) |
+
+    Any use of the deprecated syntax should ideally be replaced in source, however the generator does support definition of wrapper macros if required.
 
 ** Generator
 

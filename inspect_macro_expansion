@@ -1,0 +1,1 @@
+gcc -I . -I ./vendor/catch -E test/pp_iter_test.cpp
