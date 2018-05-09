@@ -1,1 +1,6 @@
-gcc -I . -I ./vendor/catch -E test/pp_iter_test.cpp
+if [ -e macro_expansion_errors.cpp ]
+then
+rm macro_expansion_errors.cpp
+fi
+
+gcc -I . -I ./vendor/catch -E test/pp_iter_test.cpp 2>> macro_expansion_errors.cpp

@@ -82,8 +82,6 @@ typedef struct {
   uint16_t arg2;
 } test_struct;
 
-
-
 SCENARIO("PP_EACH_IDX") {
   GIVEN("stringifying macro") {
 #define TFEQ(ARG, ARG_IDX) REQUIRE(ARG == tested.arg##ARG_IDX);
@@ -98,31 +96,31 @@ SCENARIO("PP_EACH_IDX") {
 }
 
 
-#define TFEQFIX(FIXED_ARG, ARG, ARG_IDX) REQUIRE(ARG == FIXED_ARG##ARG_IDX);
-// #define TFEQFIX(FIXED_ARG, ARG, ARG_IDX) REQUIRE(ARG == CAT(FIXED_ARG, ARG_IDX));
-SCENARIO("PP_PAR_EACH_IDX") {
-  GIVEN("stringifying macro with 1 fixed argument") {
-    WHEN("applied") {
-      test_struct tested = {.arg0 = 6, .arg1 = 5, .arg2 = 4};
-      PP_PAR_EACH_IDX(TFEQFIX, (tested.arg), 6, 5, 4);
-      THEN("arg index stringifies as expected") {
-
-      }
-    }
-  }
-
-  GIVEN("stringifying macro with 2 fixed arguments") {
 // #define TFEQFIX(FIXED_ARG, ARG, ARG_IDX) REQUIRE(ARG == FIXED_ARG##ARG_IDX);
-#define TFEQ2FIX(FIXED_ARG1, FIXED_ARG2, ARG, ARG_IDX) REQUIRE(ARG == CAT(FIXED_ARG1, ARG_IDX));
-    WHEN("applied") {
-      test_struct tested = {.arg0 = 6, .arg1 = 5, .arg2 = 4};
-      PP_PAR_EACH_IDX(TFEQ2FIX, (tested.arg, bla), 6, 5, 4);
-      THEN("arg index stringifies as expected") {
+// // #define TFEQFIX(FIXED_ARG, ARG, ARG_IDX) REQUIRE(ARG == CAT(FIXED_ARG, ARG_IDX));
+// SCENARIO("PP_PAR_EACH_IDX") {
+//   GIVEN("stringifying macro with 1 fixed argument") {
+//     WHEN("applied") {
+//       test_struct tested = {.arg0 = 6, .arg1 = 5, .arg2 = 4};
+//       PP_PAR_EACH_IDX(TFEQFIX, (tested.arg), 6, 5, 4);
+//       THEN("arg index stringifies as expected") {
 
-      }
-    }
-  }
-}
+//       }
+//     }
+//   }
+
+//   GIVEN("stringifying macro with 2 fixed arguments") {
+// // #define TFEQFIX(FIXED_ARG, ARG, ARG_IDX) REQUIRE(ARG == FIXED_ARG##ARG_IDX);
+// #define TFEQ2FIX(FIXED_ARG1, FIXED_ARG2, ARG, ARG_IDX) REQUIRE(ARG == CAT(FIXED_ARG1, ARG_IDX));
+//     WHEN("applied") {
+//       test_struct tested = {.arg0 = 6, .arg1 = 5, .arg2 = 4};
+//       PP_PAR_EACH_IDX(TFEQ2FIX, (tested.arg, bla), 6, 5, 4);
+//       THEN("arg index stringifies as expected") {
+
+//       }
+//     }
+//   }
+// }
 
 // SCENARIO("PP_1PAR_EACH_IDX") {
 //   GIVEN("stringifying macro") {
