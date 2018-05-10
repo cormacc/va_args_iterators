@@ -2,6 +2,7 @@
 
 * Table of Contents                      :TOC_4_gh:noexport:
 - [[#description][Description]]
+  - [[#update-this-doc-to-reflect-switch-to-recursive-implementations-of-all-the-varargs-iteration-macros][Update this doc to reflect switch to recursive implementations of all the varargs iteration macros]]
 - [[#use][Use]]
   - [[#macros][Macros]]
     - [[#pp_eachtf-][PP_EACH(TF, ...)]]
@@ -21,13 +22,16 @@
 * Description
   Some [[file:pp_iter.h][C macros]] (and an associated [[file:vaiter_generator.rb][code generator]]) to count and iterate over variadic macro arguments.
 
-  A [[file:enum.h][set of macros]] to facilitate auto-generation of string representations of members of an enum type
+  A [[file:enum.h][set of macros]] to facilitate auto-generation of string representations of members of an enum type.
+
+
 
   The included =pp_iter.h= includes macros to handle up to 64 arguments. Behaviour beyond this is undefined.
   The Ruby code generator script can be used to generate a header supporting larger numbers of variadic arguments if required.
   The C99 and C11 standard specifies that a compiler must handle a program with a macro with 127 arguments, so behaviour beyond this limit will be undefined.
   In theory, this only guarantees operation of the counting macros up to about 63 arguments, at least using this implementation.
 
+** TODO Update this doc to reflect switch to recursive implementations of all the varargs iteration macros
 
 * Use
 
@@ -82,7 +86,7 @@
 
     The original implementation required separate parameterised macro sets to be defined for a given number of fixed arguments, but the adoption of nested bracing has allowed them to be eliminated.
 
-    | Deprecated syntax                       | New syntax                              |
+    | Deprecated syntax                       | New syntax                               |
     |-----------------------------------------+------------------------------------------|
     | PP_1PAR_EACH_IDX(TF, FARG, ...)         | PP_PAR_EACH_IDX(TF, (FARG), ...)         |
     | PP_2PAR_EACH_IDX(TF, FARG1, FARG2, ...) | PP_PAR_EACH_IDX(TF, (FARG1, FARG2), ...) |

@@ -26,7 +26,7 @@ SCENARIO("PP_NARG") {
   }
 }
 
-static int accumulated_values[10];
+static int accumulated_values[256];
 static size_t calls;
 static size_t sum;
 void accumulate(int next)
@@ -59,6 +59,29 @@ SCENARIO("PP_EACH") {
         REQUIRE(accumulated_values[0] == 1);
         REQUIRE(accumulated_values[1] == 2);
         REQUIRE(accumulated_values[2] == 3);
+      }
+    }
+
+    WHEN("256 arguments specified") {
+      PP_EACH(ACC,
+              1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+              1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+              1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+              1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+
+              1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+              1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+              1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+              1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
+        )
+
+      THEN("256 calls are made") {
+        REQUIRE(calls==256);
+      }
+
+      THEN("arguments are passed in order") {
+        REQUIRE(accumulated_values[0] == 1);
+        REQUIRE(accumulated_values[255] == 32);
       }
     }
   }
@@ -96,31 +119,40 @@ SCENARIO("PP_EACH_IDX") {
 }
 
 
-// #define TFEQFIX(FIXED_ARG, ARG, ARG_IDX) REQUIRE(ARG == FIXED_ARG##ARG_IDX);
-// // #define TFEQFIX(FIXED_ARG, ARG, ARG_IDX) REQUIRE(ARG == CAT(FIXED_ARG, ARG_IDX));
-// SCENARIO("PP_PAR_EACH_IDX") {
-//   GIVEN("stringifying macro with 1 fixed argument") {
-//     WHEN("applied") {
-//       test_struct tested = {.arg0 = 6, .arg1 = 5, .arg2 = 4};
-//       PP_PAR_EACH_IDX(TFEQFIX, (tested.arg), 6, 5, 4);
-//       THEN("arg index stringifies as expected") {
+#define TFEQFIX(FIXED_ARG, ARG, ARG_IDX) REQUIRE(ARG == FIXED_ARG##ARG_IDX);
+// #define TFEQFIX(FIXED_ARG, ARG, ARG_IDX) REQUIRE(ARG == CAT(FIXED_ARG, ARG_IDX));
+SCENARIO("PP_PAR_EACH_IDX") {
+  GIVEN("stringifying macro with 1 fixed argument") {
+    WHEN("applied") {
+      test_struct tested = {.arg0 = 6, .arg1 = 5, .arg2 = 4};
+      PP_PAR_EACH_IDX(TFEQFIX, (tested.arg), 6, 5, 4);
+      THEN("arg index stringifies as expected") {
 
-//       }
-//     }
-//   }
+      }
+    }
+  }
 
-//   GIVEN("stringifying macro with 2 fixed arguments") {
-// // #define TFEQFIX(FIXED_ARG, ARG, ARG_IDX) REQUIRE(ARG == FIXED_ARG##ARG_IDX);
-// #define TFEQ2FIX(FIXED_ARG1, FIXED_ARG2, ARG, ARG_IDX) REQUIRE(ARG == CAT(FIXED_ARG1, ARG_IDX));
-//     WHEN("applied") {
-//       test_struct tested = {.arg0 = 6, .arg1 = 5, .arg2 = 4};
-//       PP_PAR_EACH_IDX(TFEQ2FIX, (tested.arg, bla), 6, 5, 4);
-//       THEN("arg index stringifies as expected") {
+  GIVEN("stringifying macro with 2 fixed arguments") {
+#define TFEQ2FIX(FIXED_ARG1, FIXED_ARG2, ARG, ARG_IDX) REQUIRE(ARG*FIXED_ARG1 == FIXED_ARG2##ARG_IDX);
+    WHEN("applied") {
+      test_struct tested = {.arg0 = 6, .arg1 = 4, .arg2 = 2};
+      PP_PAR_EACH_IDX(TFEQ2FIX, (2, tested.arg), 3, 2, 1);
+      THEN("arg index stringifies as expected") {
 
-//       }
-//     }
-//   }
-// }
+      }
+    }
+  }
+
+  GIVEN("stringifying macro with 1 unparenthesised argument") {
+    WHEN("applied") {
+      test_struct tested = {.arg0 = 6, .arg1 = 5, .arg2 = 4};
+      PP_PAR_EACH_IDX(TFEQFIX, tested.arg, 6, 5, 4);
+      THEN("arg index stringifies as expected") {
+
+      }
+    }
+  }
+}
 
 // SCENARIO("PP_1PAR_EACH_IDX") {
 //   GIVEN("stringifying macro") {
