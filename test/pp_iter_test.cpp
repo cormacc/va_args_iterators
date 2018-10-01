@@ -7,6 +7,77 @@
 // Test includes
 #include <string.h>
 
+SCENARIO("NOT") {
+  GIVEN("should evaluate to 1 given 0") {
+    REQUIRE( NOT(0) == 1 );
+  }
+
+  GIVEN("should evaluate to 0 given 1") {
+    REQUIRE( NOT(1) == 0 );
+  }
+
+  GIVEN("should evaluate to 0 given >1") {
+    REQUIRE( NOT(9) == 0 );
+  }
+
+#define _INDIRECT(x) x
+  GIVEN("should evaluate to 1 given indirect 0") {
+    REQUIRE( NOT(_INDIRECT(0)) == 1 );
+  }
+
+  GIVEN("should evaluate to 0 given indirect 1") {
+    REQUIRE( NOT(_INDIRECT(1)) == 0 );
+  }
+
+  GIVEN("should evaluate to 0 given indirect >1") {
+    REQUIRE( NOT(_INDIRECT(9)) == 0 );
+  }
+
+  GIVEN("should handle counting 0 args") {
+    REQUIRE( NOT(PP_NARG()) == 1 );
+  }
+
+  GIVEN("should handle counting multiple args") {
+    REQUIRE( NOT(PP_NARG(1, 2, 3)) == 0 );
+  }
+}
+
+SCENARIO("NOT_EMPTY") {
+  GIVEN("should evaluate to 0 given no args") {
+    REQUIRE( NOT_EMPTY() == 0 );
+  }
+
+  GIVEN("should evaluate to 1 given 1 arg") {
+    REQUIRE( NOT_EMPTY(3) == 1 );
+  }
+
+  GIVEN("should evaluate to 1 given multiple args") {
+    REQUIRE( NOT_EMPTY(3, b, 4) == 1 );
+  }
+
+  GIVEN("should evaluate to 1 given quoted arg") {
+    REQUIRE( NOT_EMPTY('a') == 1 );
+  }
+}
+
+SCENARIO("IS_EMPTY") {
+  GIVEN("should evaluate to 1 given no args") {
+    REQUIRE( IS_EMPTY() == 1 );
+  }
+
+  GIVEN("should evaluate to 0 given 1 arg") {
+    REQUIRE( IS_EMPTY(3) == 0 );
+  }
+
+  GIVEN("should evaluate to 0 given multiple arg") {
+    REQUIRE( IS_EMPTY(3, b, 4) == 0 );
+  }
+
+  GIVEN("should evaluate to 0 given quoted arg") {
+    REQUIRE( IS_EMPTY('a') == 0 );
+  }
+}
+
 SCENARIO("PP_NARG") {
   GIVEN("should count no arguments") {
     REQUIRE( PP_NARG() == 0 );
@@ -94,6 +165,21 @@ SCENARIO("PP_EACH") {
         REQUIRE(strcmp("a", a_tag)==0);
         REQUIRE(strcmp("b", b_tag)==0);
         REQUIRE(strcmp("c", c_tag)==0);
+      }
+    }
+  }
+
+  GIVEN("quoted parameters") {
+    WHEN("single quoted") {
+#define CACHE_CHAR(A) chars[i++] = A;
+      char chars[3];
+      int i = 0;
+      PP_EACH(CACHE_CHAR, 'a', 'b', 'c');
+      THEN("chars handled successfully") {
+        REQUIRE(i==3);
+        REQUIRE(chars[0]=='a');
+        REQUIRE(chars[1]=='b');
+        REQUIRE(chars[2]=='c');
       }
     }
   }

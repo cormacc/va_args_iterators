@@ -141,7 +141,7 @@
 
     #+BEGIN_SRC c
       #include "enum.h"
-      #define FavouritePiperIds \
+      #define FavouritePiperTags \
         WILLIE_CLANCY, \
         SEAMUS_ENNIS, \
         TOMMY_RECK
@@ -153,7 +153,7 @@
 
     #+BEGIN_SRC c
       #include "enum.h"
-      #define FavouritePiperIds \
+      #define FavouritePiperTags \
         WILLIE_CLANCY, \
         SEAMUS_ENNIS, \
         TOMMY_RECK
@@ -172,7 +172,7 @@
 
     #+BEGIN_SRC c
       #include "enum.h"
-      #define FavouritePiperIds \
+      #define FavouritePiperTags \
         WILLIE_CLANCY, \
         SEAMUS_ENNIS, \
         TOMMY_RECK
@@ -184,7 +184,7 @@
 
     #+BEGIN_SRC c
       #include "enum.h"
-      #define FavouritePiperIds \
+      #define FavouritePiperTags \
         WILLIE_CLANCY, \
         SEAMUS_ENNIS, \
         TOMMY_RECK

@@ -164,10 +164,7 @@ EOH
 #define TAIL(FIRST, ...) __VA_ARGS__
 
 #define TEST_LAST EXISTS(1)
-#define IS_EMPTY(...) \
-  PP_MATCHER( \
-    DEFER(HEAD) (__VA_ARGS__ EXISTS(1))\
-  , 0)
+#define IS_EMPTY(...)  NOT(PP_NARG(__VA_ARGS__))
 #define NOT_EMPTY(...) NOT(IS_EMPTY(__VA_ARGS__))
 EOH
                         )
@@ -359,7 +356,7 @@ EOH
  * Refined by arpad. and zhangj to handle the no-argument case
  *
  * The (preferred) recursive implementations of PP_EACH, PP_EACH_IDX and PP_PAR_EACH_IDX are based on an excellent series of posts by Saad Ahmad
- # http://saadahmad.ca/cc-preprocessor-metaprogramming-2/
+ * http://saadahmad.ca/cc-preprocessor-metaprogramming-2/
  *
  * The non- (or semi-) recursive PP_EACH implementation is based on this blog post by Daniel Hardman:
  * https://codecraft.co/2014/11/25/variadic-macros-tricks/

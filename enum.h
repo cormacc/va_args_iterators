@@ -8,7 +8,7 @@
  * These macros are used to generate enums and associated tags without repetition, e.g.
  *
  * 1. Define the unique names in a new macro
- * #define MyEnumIds NAME_1, NAME_2, NAME_3
+ * #define MyEnumTags NAME_1, NAME_2, NAME_3
  *
  * 2. Create the enum (In the .h, typically)
  * TAGGED_ENUM(MyEnum);
