@@ -182,6 +182,18 @@ SCENARIO("PP_EACH") {
         REQUIRE(chars[2]=='c');
       }
     }
+    WHEN("double quoted") {
+#define CACHE_INITIAL(A) chars[i++] = A[0];
+      char chars[3];
+      int i = 0;
+      PP_EACH(CACHE_INITIAL, "a", "b", "c");
+      THEN("chars handled successfully") {
+        REQUIRE(i==3);
+        REQUIRE(chars[0]=='a');
+        REQUIRE(chars[1]=='b');
+        REQUIRE(chars[2]=='c');
+      }
+    }
   }
 }
 
@@ -199,6 +211,29 @@ SCENARIO("PP_EACH_IDX") {
       PP_EACH_IDX(TFEQ, 6, 5, 4);
       THEN("arg index stringifies as expected") {
 
+      }
+    }
+  }
+
+  GIVEN("quoted parameters") {
+    WHEN("single quoted") {
+#define CACHE_CHAR_AT_IDX(A, IDX) chars[IDX] = A;
+      char chars[3];
+      PP_EACH_IDX(CACHE_CHAR_AT_IDX, 'a', 'b', 'c');
+      THEN("chars handled successfully") {
+        REQUIRE(chars[0]=='a');
+        REQUIRE(chars[1]=='b');
+        REQUIRE(chars[2]=='c');
+      }
+    }
+    WHEN("double quoted") {
+#define CACHE_INITIAL_AT_IDX(A, IDX) chars[IDX] = A[0];
+      char chars[3];
+      PP_EACH_IDX(CACHE_INITIAL_AT_IDX, "a", "b", "c");
+      THEN("chars handled successfully") {
+        REQUIRE(chars[0]=='a');
+        REQUIRE(chars[1]=='b');
+        REQUIRE(chars[2]=='c');
       }
     }
   }

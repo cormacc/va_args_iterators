@@ -20,6 +20,7 @@
 - [[#implementation--references][Implementation / references]]
 
 * Description
+
   Some [[file:pp_iter.h][C macros]] (and an associated [[file:vaiter_generator.rb][code generator]]) to count and iterate over variadic macro arguments.
 
   A [[file:enum.h][set of macros]] to facilitate auto-generation of string representations of members of an enum type.
