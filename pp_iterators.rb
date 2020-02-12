@@ -169,7 +169,7 @@ EOH
   end
 
   IS_EMPTY_NO_GCC_EXTENSIONS = <<-EOH
-IS_EMPTY(...)\
+IS_EMPTY(...) \
 _ISEMPTY(\
           /* test if there is just one argument, eventually an empty one */\
           HAS_COMMA(__VA_ARGS__),\
@@ -434,7 +434,7 @@ EOH
 #define PP_IS_GCC_EXTENDED (defined(__GNUC__) && !defined(__STRICT_ANSI__))
 #define PP_IS_MSVC_EXPERIMENTAL (defined(_MSVC_TRADITIONAL) && !_MSVC_TRADITIONAL)
 #define PP_IS_CONFORMANT (PP_IS_GCC_EXTENDED || PP_IS_MSVC_EXPERIMENTAL)
-      
+
 //Defer / evaluate macros
 #{defer}
 #{eval}
