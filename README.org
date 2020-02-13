@@ -2,45 +2,41 @@
 
 * Table of Contents                      :TOC_4_gh:noexport:
 - [[#description][Description]]
-- [[#use][Use]]
+- [[#usage-instructions][Usage instructions]]
   - [[#macros][Macros]]
     - [[#pp_eachtf-][PP_EACH(TF, ...)]]
     - [[#pp_each_idxtf-][PP_EACH_IDX(TF, ...)]]
     - [[#pp_par_each_idxtf-fixed_args-][PP_PAR_EACH_IDX(TF, (FIXED_ARGS), ...)]]
     - [[#deprecated-macros][Deprecated macros]]
   - [[#generator][Generator]]
-  - [[#use-example----autogeneration-of-string-descriptors-for-an-enum-type][Use example -- autogeneration of string descriptors for an enum type]]
-    - [[#my_tagged_enumh][my_tagged_enum.h]]
-      - [[#untyped-enum][Untyped enum]]
-      - [[#typed-enum][Typed enum]]
-    - [[#my_tagged_enumc][my_tagged_enum.c]]
-      - [[#automatic-tag-generation][Automatic tag generation]]
-      - [[#custom-tag-definition][Custom tag definition]]
-- [[#implementation--references][Implementation / references]]
+- [[#usage-example--auto-generation-of-string-descriptors-for-an-enum-type][Usage example :: auto-generation of string descriptors for an enum type]]
+  - [[#my_tagged_enumh][my_tagged_enum.h]]
+    - [[#untyped-enum][Untyped enum]]
+    - [[#typed-enum][Typed enum]]
+  - [[#my_tagged_enumc][my_tagged_enum.c]]
+    - [[#automatic-tag-generation][Automatic tag generation]]
+    - [[#custom-tag-definition][Custom tag definition]]
+- [[#references--prior-art][References / prior art]]
 
 * Description
-  Some [[file:pp_iter.h][C macros]] (and an associated [[file:vaiter_generator.rb][code generator]]) to count and iterate over variadic macro arguments.
-
-  A [[file:enum.h][set of macros]] to facilitate auto-generation of string representations of members of an enum type
+  This repository includes the following:
+  - [[file:./pp_iter.h][pp_iter.h]] :: Some C macros (and an associated [[file:vaiter_generator.rb][code generator]]) to count and iterate over variadic macro arguments.
+  - [[file:./pp_enum.h][pp_enum.h]] :: A set of macros building on those defined in pp_iter.h to facilitate auto-generation of string representations of members of an enum type.
 
   The included =pp_iter.h= includes macros to handle up to 64 arguments. Behaviour beyond this is undefined.
   The Ruby code generator script can be used to generate a header supporting larger numbers of variadic arguments if required.
-  The C99 and C11 standard specifies that a compiler must handle a program with a macro with 127 arguments, so behaviour beyond this limit will be undefined.
-  In theory, this only guarantees operation of the counting macros up to about 63 arguments, at least using this implementation.
 
+  The C99 and C11 standard specifies that a compiler must handle a program with a macro with 127 arguments, so behaviour beyond this limit will be undefined.  difficulties (haven't tested higher numbers. In theory, this only guarantees operation of the counting macros up to about 63 arguments, at least using this implementation.
 
-* Use
+In my experience, MSVC appears to enforce the 127-argument limit, whereas gcc handled 512 without difficulties (didn't test any higher arg count).
+
+* Usage instructions
 
 ** Macros
 
-   #+BEGIN_NOTE
    This family of macros is intended to allow the transformation of a =__VA_ARGS__= list into a single C expression OR one C expression per argument.
    In the latter case, the transformation macro should include the concluding semi-colon.
-   #+END_NOTE
-
-   #+BEGIN_NOTE
    The two indexed macro variants use 0-based indexing.
-   #+END_NOTE
 
 *** PP_EACH(TF, ...)
     Iterates over a set of variadic macro arguments and applies a provided transformation macro (=TF(ARG)=) to each argument =ARG=.
@@ -51,9 +47,7 @@
 *** PP_PAR_EACH_IDX(TF, (FIXED_ARGS), ...)
     Iterates over a set of variadic macro arguments and applies a provided transformation macro =TF(FIXED_ARG1, [...additional fixed args,], ARG, IDX)= to each argument =ARG= and index =IDX=.
 
-    #+BEGIN_NOTES
     Any number of fixed args may be used, however the fixed args MUST be parenthesised in the macro call. I.e. =PP_PAR_EACH_IDX(TF, (FIXED_ARG1), VAR_ARG_1, VAR_ARG_2)= will work, but =PP_PAR_EACH_IDX(TF, FIXED_ARG1, VAR_ARG_1, VAR_ARG_2)= won't.
-    #+END_NOTES
 
     I use it when mocking dependencies (using ceedling and fake function framework)
     for shorthand verification of function calls, i.e.
@@ -73,16 +67,16 @@
     ... which is facilitated by ....
     #+BEGIN_SRC c
       #define _FFF_VERIFY_PARAMETER_(FN, VAL, IDX) TEST_ASSERT_EQUAL(VAL, FN##_fake.arg##IDX##_val);
-      #define TEST_ASSERT_CALLED_WITH(FN, ...)                    \
-        TEST_ASSERT_CALLED(FN);                                   \
-        PP_PAR_EACH_IDX(_FFF_VERIFY_PARAMETER_, (FN), __VA_ARGS__)
+      #define TEST_ASSERT_CALLED_WITH(FN, ...)                        \
+          TEST_ASSERT_CALLED(FN);                                     \
+          PP_PAR_EACH_IDX(_FFF_VERIFY_PARAMETER_, (FN), __VA_ARGS__)
     #+END_SRC
 
 *** Deprecated macros
 
     The original implementation required separate parameterised macro sets to be defined for a given number of fixed arguments, but the adoption of nested bracing has allowed them to be eliminated.
 
-    | Deprecated syntax                       | New syntax                              |
+    | Deprecated syntax                       | New syntax                               |
     |-----------------------------------------+------------------------------------------|
     | PP_1PAR_EACH_IDX(TF, FARG, ...)         | PP_PAR_EACH_IDX(TF, (FARG), ...)         |
     | PP_2PAR_EACH_IDX(TF, FARG1, FARG2, ...) | PP_PAR_EACH_IDX(TF, (FARG1, FARG2), ...) |
@@ -107,9 +101,7 @@
 
    When called without any arguments, the default value of 64 will be used.
 
-   The generator provides a set of methods which may be used in 3rd party code generators.
-   These support generation of the macros described above as well as variants (e.g. macro sets with an
-   arbitrary number of fixed args, and some variants of the argument counting macros).
+   The generator provides a set of methods which may be used in 3rd party code generators. These support generation of the macros described above as well as variants (e.g. macro sets with an arbitrary number of fixed args, and some variants of the argument counting macros).
 
    The argument counting macros use some common definitions, or see the [[https://github.com/meekrosoft/fff][fake function framework]] for a usage example.
 
@@ -126,21 +118,20 @@
      EOH
    #+END_SRC
 
-** Use example -- autogeneration of string descriptors for an enum type
+* Usage example :: auto-generation of string descriptors for an enum type
 
-   The file [[file:enum.h][enum.h]] uses =PP_EACH= to support autogeneration of textual descriptions of enum members.
-   This saves some repetition and eliminates the risk of forgetting to update the tag when adding/re-arranging members.
+  The file [[file:enum.h][enum.h]] uses =PP_EACH= to support autogeneration of textual descriptions of enum members. This saves some repetition and eliminates the risk of forgetting to update the tag when adding/re-arranging members.
 
-*** my_tagged_enum.h
+** my_tagged_enum.h
 
-**** Untyped enum
+*** Untyped enum
 
     #+BEGIN_SRC c
       #include "enum.h"
-      #define FavouritePiperIds \
-        WILLIE_CLANCY, \
-        SEAMUS_ENNIS, \
-        TOMMY_RECK
+      #define FavouritePiperIds                   \
+          WILLIE_CLANCY,                          \
+          SEAMUS_ENNIS,                           \
+          TOMMY_RECK
 
       TAGGED_ENUM(FavouritePiper);
     #+END_SRC
@@ -149,29 +140,29 @@
 
     #+BEGIN_SRC c
       #include "enum.h"
-      #define FavouritePiperIds \
-        WILLIE_CLANCY, \
-        SEAMUS_ENNIS, \
-        TOMMY_RECK
+      #define FavouritePiperIds                   \
+          WILLIE_CLANCY,                          \
+          SEAMUS_ENNIS,                           \
+          TOMMY_RECK
 
       enum FavouritePiper {
-        WILLIE_CLANCY,
-        SEAMUS_ENNIS,
-        TOMMY_RECK,
-        FavouritePiper_COUNT
+          WILLIE_CLANCY,
+          SEAMUS_ENNIS,
+          TOMMY_RECK,
+          FavouritePiper_COUNT
       };
 
       char const * FavouritePiper_asCString(int id);
     #+END_SRC
 
-**** Typed enum
+*** Typed enum
 
     #+BEGIN_SRC c
       #include "enum.h"
-      #define FavouritePiperIds \
-        WILLIE_CLANCY, \
-        SEAMUS_ENNIS, \
-        TOMMY_RECK
+      #define FavouritePiperIds                       \
+          WILLIE_CLANCY,                              \
+              SEAMUS_ENNIS,                           \
+              TOMMY_RECK
 
       TAGGED_ENUM_TYPE(FavouritePiper);
     #+END_SRC
@@ -180,25 +171,25 @@
 
     #+BEGIN_SRC c
       #include "enum.h"
-      #define FavouritePiperIds \
-        WILLIE_CLANCY, \
-        SEAMUS_ENNIS, \
-        TOMMY_RECK
+      #define FavouritePiperIds                       \
+          WILLIE_CLANCY,                              \
+              SEAMUS_ENNIS,                           \
+              TOMMY_RECK
 
       typedef enum {
-        WILLIE_CLANCY,
-        SEAMUS_ENNIS,
-        TOMMY_RECK,
-        FavouritePiper_COUNT
+          WILLIE_CLANCY,
+          SEAMUS_ENNIS,
+          TOMMY_RECK,
+          FavouritePiper_COUNT
       } FavouritePiper;
 
       char const * FavouritePiper_asCString(int id);
     #+END_SRC
 
-*** my_tagged_enum.c
+** my_tagged_enum.c
 
-**** Automatic tag generation
-     (This uses the =PP_EACH= macro)
+*** Automatic tag generation
+    (This uses the =PP_EACH= macro)
 
     #+BEGIN_SRC c
       #include "my_tagged_enum.h"
@@ -212,25 +203,25 @@
       #include "my_tagged_enum.h"
 
       static char const * FavouritePiper_TAGS[] = {
-        "WILLIE_CLANCY",
-        "SEAMUS_ENNIS",
-        "TOMMY_RECK",
+          "WILLIE_CLANCY",
+          "SEAMUS_ENNIS",
+          "TOMMY_RECK",
       };
 
       char const * FavouritePiper_asCString(int id) { return id < FavouritePiper_COUNT ? FavouritePiper_TAGS[id] : "UNDEFINED"; }
     #+END_SRC
 
-**** Custom tag definition
-   This sacrifices the protection against re-arrangement of members, but should at least ensure that your compiler warns you if the number of tags doesn't match the number of enum members.
+*** Custom tag definition
+    This sacrifices the protection against re-arrangement of members, but should at least ensure that your compiler warns you if the number of tags doesn't match the number of enum members.
 
     #+BEGIN_SRC c
       #include "my_tagged_enum.h"
 
       ENUM_DESCRIBE_EXPLICIT(FavouritePiper,
-                       "Willie Clancy",
-                       "Seamus Ennis",
-                       "Tommy Reck"
-        );
+                             "Willie Clancy",
+                             "Seamus Ennis",
+                             "Tommy Reck"
+          );
     #+END_SRC
 
     ... which expands to ...
@@ -239,32 +230,18 @@
       #include "my_tagged_enum.h"
 
       static char const * FavouritePiper_TAGS[] = {
-        "Willie Clancy",
-        "Seamus Ennis",
-        "Tommy Reck"
+          "Willie Clancy",
+          "Seamus Ennis",
+          "Tommy Reck"
       };
 
       char const * FavouritePiper_asCString(int id) { return id < FavouritePiper_COUNT ? FavouritePiper_TAGS[id] : "UNDEFINED"; }
     #+END_SRC
 
 
-* Implementation / references
-
-  =PP_EACH= uses a recursive implementation I encountered in a blog post by Daniel Hardman here:
-  https://codecraft.co/2014/11/25/variadic-macros-tricks/
-
-  =PP_EACH_IDX= and =PP_1PAR_EACH_IDX= extend a non-recursive implementation found in an anonymous blog post here:
-  http://ptspts.blogspot.ie/2013/11/how-to-apply-macro-to-all-arguments-of.html
-
-  My attempt to use the recursive implementation for the latter variants gives reversed argument indices -- i.e.
-  given 3 arguments ={ARG0, ARG1, ARG2}=, the transformation macro will be called with
-  #+BEGIN_SRC c
-    TF(ARG0, 2)
-    TF(ARG1, 1)
-    TF(ARG2, 0)
-  #+END_SRC
-
-  There's probably an obvious way to solve this problem - PR welcome :)
-
-  Or there's another recursive approach described here that looks interesting:
-  http://saadahmad.ca/cc-preprocessor-metaprogramming-2/
+* References / prior art
+- I initially encountered the variadic macro counting logic in [[https://groups.google.com/forum/#!topic/comp.std.c/d-6Mj5Lko_s][this post]] by Laurent Deniau. His solution was refined by arpad. and zhangj to handle the no-argument case.
+- The (preferred) recursive implementations of PP_EACH, PP_EACH_IDX and PP_PAR_EACH_IDX are based on an [[http://saadahmad.ca/cc-preprocessor-metaprogramming-2/][excellent series of posts]] by Saad Ahmad.
+- The non- (or semi-) recursive PP_EACH implementation is based on [[https://codecraft.co/2014/11/25/variadic-macros-tricks/][this blog post]] by Daniel Hardman.
+- The non-recursive PP_EACH_IDX and PP_PAR_EACH_IDX macro implementations extend the non-recursive PP_EACH implementation described in [[http://ptspts.blogspot.ie/2013/11/how-to-apply-macro-to-all-arguments-of.html][this (anonymous) blog post]].
+- The MSVC macro expansion fix was lifted from the excellent [[https://github.com/meekrosoft/fff][fake function framework]].
