@@ -56,11 +56,9 @@ class PPIterators
   MAX_ARG_COUNT_DEFAULT = 63
   DEFER_LEVELS_DEFAULT = 6
 
-  attr_reader :nargs_max, :recursive, :defer_levels
-  def initialize(recursive: true,
-                 nargs_max: MAX_ARG_COUNT_DEFAULT,
+  attr_reader :nargs_max, :defer_levels
+  def initialize(nargs_max: MAX_ARG_COUNT_DEFAULT,
                  defer_levels: DEFER_LEVELS_DEFAULT)
-    @recursive = recursive
     @nargs_max = nargs_max
     @defer_levels = defer_levels
   end
@@ -282,34 +280,10 @@ EOH
 EOH
   end
 
-  def pp_each_non_recursive
-    CFile::define_macros([
-                         "PP_EACH(TF, ...) _PP_EACH(TF, PP_NARG(__VA_ARGS__), __VA_ARGS__)",
-                         "_PP_EACH(TF, N, ...) __PP_EACH(TF, N, __VA_ARGS__)",
-                         "__PP_EACH(TF, N, ...) EXPAND(_PP_EACH_##N(TF, __VA_ARGS__))",
-                         "",
-                         "_PP_EACH_0(TF, ...)",
-                         "_PP_EACH_1(TF, next_arg) TF(next_arg)",
-                       ] + (2..@nargs_max).map { |arg_count| "_PP_EACH_#{arg_count}(TF, next_arg, ...) TF(next_arg) _PP_EACH_#{arg_count-1}(TF, __VA_ARGS__)" }
-                      )
-  end
-
-  def each_idx_non_recursive
-    CFile::define_macros(
-      [
-        "PP_EACH_IDX(TF, ...) _PP_EACH_IDX(TF, PP_NARG(__VA_ARGS__), __VA_ARGS__)",
-        "_PP_EACH_IDX(TF, N, ...) __PP_EACH_IDX(TF, N, __VA_ARGS__)",
-        "__PP_EACH_IDX(TF, N, ...) EXPAND(_PP_EACH_IDX_##N(TF, __VA_ARGS__))",
-        "",
-        "_PP_EACH_IDX_0(TF, dummy)"
-      ] + (1..@nargs_max).map do |arg_count|
-        arg_indices = (0..arg_count-1)
-        arg_ids = arg_indices.map{ |aidx| "_#{aidx}"}
-        macro_signature = "_PP_EACH_IDX_#{arg_count}(TF, #{arg_ids.join(', ')})"
-        macro_body = arg_indices.map { |aidx| "TF(_#{aidx}, #{aidx})" }.join(' ')
-        "#{macro_signature} #{macro_body}"
-      end
-    )
+  def pp_list_each
+    <<-'EOH'
+//!!!IMPLEMENT ME!!!
+EOH
   end
 
   def pp_each_idx
@@ -342,40 +316,25 @@ EOH
 EOH
   end
 
-  def pp_par_each_idx_non_recursive
-    CFile::define_macros(
-      [
-        "PP_PAR_EACH_IDX(TF, FARGS, ...) _PP_PAR_EACH_IDX(TF, FARGS, PP_NARG(__VA_ARGS__), __VA_ARGS__)",
-        "_PP_PAR_EACH_IDX(TF, FARGS, N, ...) __PP_PAR_EACH_IDX(TF, FARGS, N, __VA_ARGS__)",
-        "__PP_PAR_EACH_IDX(TF, FARGS, N, ...) EXPAND(_PP_PAR_IDX_##N(TF, FARGS, __VA_ARGS__))",
-        "_PP_APPLY(TF, FARGS, VARG, IDX) DEFER(TF) (DEPAREN(FARGS), VARG, IDX)",
-        "",
-        "_PP_PAR_IDX_0(TF, FARGS, dummy)",
-      ] + (1..@nargs_max).map do |arg_count|
-        arg_indices = (0..arg_count-1)
-        arg_ids = arg_indices.map{ |aidx| "_#{aidx}"}
-        macro_signature = "_PP_PAR_IDX_#{arg_count}(TF, FARGS, #{arg_ids.join(', ')})"
-        macro_body = arg_indices.map { |aidx| "_PP_APPLY(TF, FARGS, _#{aidx}, #{aidx})" }.join(' ')
-        "#{macro_signature} EVAL(#{macro_body})"
-      end
-    )
-  end
-
   def each
-    CFile::include_guard('PP_EACH', @recursive ? pp_each : pp_each_non_recursive)
+    CFile::include_guard('PP_EACH', pp_each)
   end
 
   def each_with_index
-    CFile::include_guard('PP_EACH_IDX', @recursive ? pp_each_idx : each_idx_non_recursive)
+    CFile::include_guard('PP_EACH_IDX', pp_each_idx)
   end
 
   def parameterised_each_with_index
-    CFile::include_guard("PP_PAR_EACH_IDX", @recursive ? pp_par_each_idx : pp_par_each_idx_non_recursive)
+    CFile::include_guard("PP_PAR_EACH_IDX", pp_par_each_idx)
   end
 
   def parameterised_each_with_index_n(n)
     fargs = (1..n).map { |aidx| "P#{aidx}"}.join(", ")
     CFile::define_macro("PP_#{n}PAR_EACH_IDX(TF, #{fargs}, ...) PP_PAR_EACH_IDX(TF, (#{fargs}), __VA_ARGS__)")
+  end
+
+  def list_each
+    CFile::include_guard('PP_LIST_EACH', pp_list_each)
   end
 
   def generate_header
@@ -470,6 +429,9 @@ EOH
 #{parameterised_each_with_index_n(1)}
 #{parameterised_each_with_index_n(2)}
 
+//PP_LIST_EACH
+#{list_each}
+
 EOH
   end
 
@@ -480,7 +442,6 @@ if __FILE__==$0
 
   #Default options
   options = OpenStruct.new
-  options.recursive = true
   options.nargs_max = PPIterators::MAX_ARG_COUNT_DEFAULT
 
   OptionParser.new do |opts|
@@ -488,11 +449,8 @@ if __FILE__==$0
     opts.on("--limit N", Integer, "Argument count limit (defaults to #{PPIterators::MAX_ARG_COUNT_DEFAULT})") do |n|
       options.nargs_max=n
     end
-    opts.on("--no-tail-recursion", "Use legacy implementation (no tail recursion)") do |r|
-      options.recursive=false
-    end
   end.parse!
   # ppi = ARGV.empty? ? PPIterators.new() : PPIterators.new(ARGV[0].to_i)
-  ppi = PPIterators.new(recursive: options.recursive, nargs_max: options.nargs_max)
+  ppi = PPIterators.new(nargs_max: options.nargs_max)
   puts ppi.generate_header
 end

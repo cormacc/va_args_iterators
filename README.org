@@ -35,11 +35,7 @@ The C99 and C11 standard specifies that a compiler must handle a program with a 
 In my experience, MSVC appears to enforce the 127-argument limit, whereas gcc handled 512 without difficulties (didn't test any higher arg count).
 
 * Compiler compatibility
-This implementation has been tested with clang and with numerous versions of gcc (desktop and embedded) without issue. I haven't tested recently with MSVC (and life's too short...) but if you encounter issues, the ruby generator supports a more lengthy version of the macro set that doesn't use tail recursion but may be more compatible. Just pass the =--no-tail-recursion= argument to the generator as follows.
-
-```
-ruby pp_iterators.rb --no-tail-recursion
-```
+This implementation has been tested with clang and with numerous versions of gcc (desktop and embedded) without issue. I haven't tested recently with MSVC (and life's too short...) but if you encounter issues, the =non-recursive= branch of this repository includes a version of the ruby generator that can optionally not use tail recursion and generate a functional but much more verbose version of =pp_iter.h=. Check out that branch for further information.
 
 * Usage instructions
 
