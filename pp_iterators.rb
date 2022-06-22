@@ -10,6 +10,8 @@
 # - https://gustedt.wordpress.com/2010/06/08/detect-empty-macro-arguments/
 
 require 'date'
+require 'optparse'
+require 'ostruct'
 
 class PPIterators
 
@@ -52,14 +54,14 @@ class PPIterators
 
   # MSVC enforces the standard minimum requirement of 127 VA_ARGS
   MAX_ARG_COUNT_DEFAULT = 63
-  MAX_ARG_COUNT_DEFAULT_NON_RECURSIVE = 64
   DEFER_LEVELS_DEFAULT = 6
 
   attr_reader :nargs_max, :recursive, :defer_levels
   def initialize(recursive: true,
+                 nargs_max: MAX_ARG_COUNT_DEFAULT,
                  defer_levels: DEFER_LEVELS_DEFAULT)
     @recursive = recursive
-    @nargs_max = @recursive ? MAX_ARG_COUNT_DEFAULT : MAX_ARG_COUNT_DEFAULT_NON_RECURSIVE
+    @nargs_max = nargs_max
     @defer_levels = defer_levels
   end
 
@@ -475,6 +477,22 @@ end
 
 # Generate a header if run standalone rather than required as a dependency
 if __FILE__==$0
-  ppi = ARGV.empty? ? PPIterators.new() : PPIterators.new(ARGV[0].to_i)
+
+  #Default options
+  options = OpenStruct.new
+  options.recursive = true
+  options.nargs_max = PPIterators::MAX_ARG_COUNT_DEFAULT
+
+  OptionParser.new do |opts|
+    opts.banner = "Usage: pp_iterators.rb [options]"
+    opts.on("--limit N", Integer, "Argument count limit (defaults to #{PPIterators::MAX_ARG_COUNT_DEFAULT})") do |n|
+      options.nargs_max=n
+    end
+    opts.on("--no-tail-recursion", "Use legacy implementation (no tail recursion)") do |r|
+      options.recursive=false
+    end
+  end.parse!
+  # ppi = ARGV.empty? ? PPIterators.new() : PPIterators.new(ARGV[0].to_i)
+  ppi = PPIterators.new(recursive: options.recursive, nargs_max: options.nargs_max)
   puts ppi.generate_header
 end

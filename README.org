@@ -2,6 +2,7 @@
 
 * Table of Contents                      :TOC_4_gh:noexport:
 - [[#description][Description]]
+- [[#compiler-compatibility][Compiler compatibility]]
 - [[#usage-instructions][Usage instructions]]
   - [[#macros][Macros]]
     - [[#pp_eachtf-][PP_EACH(TF, ...)]]
@@ -16,228 +17,295 @@
   - [[#my_tagged_enumc][my_tagged_enum.c]]
     - [[#automatic-tag-generation][Automatic tag generation]]
     - [[#custom-tag-definition][Custom tag definition]]
+- [[#unit-tests][Unit tests]]
+  - [[#building-unit-tests][Building unit tests]]
+  - [[#running-unit-tests][Running unit tests]]
 - [[#references--prior-art][References / prior art]]
 
 * Description
-  This repository includes the following:
-  - [[file:./pp_iter.h][pp_iter.h]] :: Some C macros (and an associated [[file:vaiter_generator.rb][code generator]]) to count and iterate over variadic macro arguments.
-  - [[file:./pp_enum.h][pp_enum.h]] :: A set of macros building on those defined in pp_iter.h to facilitate auto-generation of string representations of members of an enum type.
+This repository includes the following:
+- [[file:./pp_iter.h][pp_iter.h]] :: Some C macros (and an associated [[file:pp_iterators.rb][code generator]]) to count and iterate over variadic macro arguments.
+- [[file:./pp_enum.h][pp_enum.h]] :: A set of macros building on those defined in pp_iter.h to facilitate auto-generation of string representations of members of an enum type.
 
-  The included =pp_iter.h= includes macros to handle up to 64 arguments. Behaviour beyond this is undefined.
-  The Ruby code generator script can be used to generate a header supporting larger numbers of variadic arguments if required.
+The included =pp_iter.h= includes macros to handle up to 63 arguments. Behaviour beyond this is undefined.
+The Ruby code generator script can be used to generate a header supporting larger numbers of variadic arguments if required.
 
-  The C99 and C11 standard specifies that a compiler must handle a program with a macro with 127 arguments, so behaviour beyond this limit will be undefined.  difficulties (haven't tested higher numbers. In theory, this only guarantees operation of the counting macros up to about 63 arguments, at least using this implementation.
+The C99 and C11 standard specifies that a compiler must handle a program with a macro with 127 arguments, so behaviour beyond this limit will be undefined. In theory, this only guarantees operation of the counting macros up to about 63 arguments, at least using this implementation.
 
 In my experience, MSVC appears to enforce the 127-argument limit, whereas gcc handled 512 without difficulties (didn't test any higher arg count).
+
+* Compiler compatibility
+This implementation has been tested with clang and with numerous versions of gcc (desktop and embedded) without issue. I haven't tested recently with MSVC (and life's too short...) but if you encounter issues, the ruby generator supports a more lengthy version of the macro set that doesn't use tail recursion but may be more compatible. Just pass the =--no-tail-recursion= argument to the generator as follows.
+
+```
+ruby pp_iterators.rb --no-tail-recursion
+```
 
 * Usage instructions
 
 ** Macros
-
-   This family of macros is intended to allow the transformation of a =__VA_ARGS__= list into a single C expression OR one C expression per argument.
-   In the latter case, the transformation macro should include the concluding semi-colon.
-   The two indexed macro variants use 0-based indexing.
+This family of macros is intended to allow the transformation of a =__VA_ARGS__= list into a single C expression OR one C expression per argument. In the latter case, the transformation macro should include the concluding semi-colon. The two indexed macro variants use 0-based indexing.
 
 *** PP_EACH(TF, ...)
-    Iterates over a set of variadic macro arguments and applies a provided transformation macro (=TF(ARG)=) to each argument =ARG=.
+Iterates over a set of variadic macro arguments and applies a provided transformation macro (=TF(ARG)=) to each argument =ARG=.
 
 *** PP_EACH_IDX(TF, ...)
-    Iterates over a set of variadic macro arguments and applies a provided transformation macro =TF(ARG, IDX)= to each argument =ARG= and index =IDX=.
+Iterates over a set of variadic macro arguments and applies a provided transformation macro =TF(ARG, IDX)= to each argument =ARG= and index =IDX=.
 
 *** PP_PAR_EACH_IDX(TF, (FIXED_ARGS), ...)
-    Iterates over a set of variadic macro arguments and applies a provided transformation macro =TF(FIXED_ARG1, [...additional fixed args,], ARG, IDX)= to each argument =ARG= and index =IDX=.
+Iterates over a set of variadic macro arguments and applies a provided transformation macro =TF(FIXED_ARG1, [...additional fixed args,], ARG, IDX)= to each argument =ARG= and index =IDX=.
 
-    Any number of fixed args may be used, however the fixed args MUST be parenthesised in the macro call. I.e. =PP_PAR_EACH_IDX(TF, (FIXED_ARG1), VAR_ARG_1, VAR_ARG_2)= will work, but =PP_PAR_EACH_IDX(TF, FIXED_ARG1, VAR_ARG_1, VAR_ARG_2)= won't.
+I.e. =PP_PAR_EACH_IDX(TF, (FIXED_ARG1), VAR_ARG_1, VAR_ARG_2)= will work, but =PP_PAR_EACH_IDX(TF, FIXED_ARG1, VAR_ARG_1, VAR_ARG_2)= won't.
 
-    I use it when mocking dependencies (using ceedling and fake function framework)
-    for shorthand verification of function calls, i.e.
+I use it when mocking dependencies (using ceedling and fake function framework)
+for shorthand verification of function calls, i.e.
 
-    #+BEGIN_SRC c
-      TEST_ASSERT_CALLED_WITH(RgbPixel_render, &rendered_pixel, TEST_COLOUR, TEST_INTENSITY);
-    #+END_SRC
+#+BEGIN_SRC c
+  TEST_ASSERT_CALLED_WITH(RgbPixel_render, &rendered_pixel, TEST_COLOUR, TEST_INTENSITY);
+#+END_SRC
 
-    ... rather than ...
-    #+BEGIN_SRC c
-      TEST_ASSERT_EQUAL(1, RgbPixel_render_fake.call_count);
-      TEST_ASSERT_EQUAL(&rendered_pixel, RgbPixel_render_fake.arg0_val);
-      TEST_ASSERT_EQUAL(TEST_COLOUR, RgbPixel_render_fake.arg1_val);
-      TEST_ASSERT_EQUAL(TEST_INTENSITY, RgbPixel_render_fake.arg2_val);
-    #+END_SRC
+... rather than ...
+#+BEGIN_SRC c
+  TEST_ASSERT_EQUAL(1, RgbPixel_render_fake.call_count);
+  TEST_ASSERT_EQUAL(&rendered_pixel, RgbPixel_render_fake.arg0_val);
+  TEST_ASSERT_EQUAL(TEST_COLOUR, RgbPixel_render_fake.arg1_val);
+  TEST_ASSERT_EQUAL(TEST_INTENSITY, RgbPixel_render_fake.arg2_val);
+#+END_SRC
 
-    ... which is facilitated by ....
-    #+BEGIN_SRC c
-      #define _FFF_VERIFY_PARAMETER_(FN, VAL, IDX) TEST_ASSERT_EQUAL(VAL, FN##_fake.arg##IDX##_val);
-      #define TEST_ASSERT_CALLED_WITH(FN, ...)                        \
-          TEST_ASSERT_CALLED(FN);                                     \
-          PP_PAR_EACH_IDX(_FFF_VERIFY_PARAMETER_, (FN), __VA_ARGS__)
-    #+END_SRC
+... which is facilitated by ....
+#+BEGIN_SRC c
+  #define _FFF_VERIFY_PARAMETER_(FN, VAL, IDX) TEST_ASSERT_EQUAL(VAL, FN##_fake.arg##IDX##_val);
+  #define TEST_ASSERT_CALLED_WITH(FN, ...)                        \
+      TEST_ASSERT_CALLED(FN);                                     \
+      PP_PAR_EACH_IDX(_FFF_VERIFY_PARAMETER_, (FN), __VA_ARGS__)
+#+END_SRC
 
 *** Deprecated macros
 
-    The original implementation required separate parameterised macro sets to be defined for a given number of fixed arguments, but the adoption of nested bracing has allowed them to be eliminated.
+The original implementation required separate parameterised macro sets to be defined for a given number of fixed arguments, but the adoption of nested bracing has allowed them to be eliminated.
 
-    | Deprecated syntax                       | New syntax                               |
-    |-----------------------------------------+------------------------------------------|
-    | PP_1PAR_EACH_IDX(TF, FARG, ...)         | PP_PAR_EACH_IDX(TF, (FARG), ...)         |
-    | PP_2PAR_EACH_IDX(TF, FARG1, FARG2, ...) | PP_PAR_EACH_IDX(TF, (FARG1, FARG2), ...) |
+| Deprecated syntax                       | New syntax                               |
+|-----------------------------------------+------------------------------------------|
+| PP_1PAR_EACH_IDX(TF, FARG, ...)         | PP_PAR_EACH_IDX(TF, (FARG), ...)         |
+| PP_2PAR_EACH_IDX(TF, FARG1, FARG2, ...) | PP_PAR_EACH_IDX(TF, (FARG1, FARG2), ...) |
 
-    Any use of the deprecated syntax should ideally be replaced in source, however the generator does support definition of wrapper macros if required.
+Any use of the deprecated syntax should ideally be replaced in source, however the generator does support definition of wrapper macros if required.
 
 ** Generator
+This repository includes a pre-generated header to handle up to 63 =__VA_ARGS__=. A header to handle an arbitrary number of arguments may be generated using the included generator script (written in ruby), as follows:
 
-   This repository includes a pre-generated header to handle up to 64 =__VA_ARGS__=. A header to handle an arbitrary number of arguments may be generated
-   using the included generator script (written in ruby), as follows:
+#+BEGIN_SRC sh
+  ruby pp_iterators.rb --limit <NARGS>
+#+END_SRC
 
-   #+BEGIN_SRC sh
-     ruby pp_iterators.rb <NARGS>
-   #+END_SRC
+By default, the script just prints the header content to the console, so you'll want to redirect to file.
 
-   By default, the script just prints the header content to the console, so you'll want to redirect to file.
+e.g. for up to 127 args
+#+BEGIN_SRC sh
+  ruby pp_iterators.rb --limit 127 > pp_iter.h
+#+END_SRC
 
-   e.g. for up to 127 args
-   #+BEGIN_SRC sh
-     ruby pp_iterators.rb 127 > pp_iter.h
-   #+END_SRC
+When called without any arguments, the default value of 63 will be used.
 
-   When called without any arguments, the default value of 64 will be used.
+The generator provides a set of methods which may be used in 3rd party code generators. These support generation of the macros described above as well as variants (e.g. macro sets with an arbitrary number of fixed args, and some variants of the argument counting macros).
 
-   The generator provides a set of methods which may be used in 3rd party code generators. These support generation of the macros described above as well as variants (e.g. macro sets with an arbitrary number of fixed args, and some variants of the argument counting macros).
+The argument counting macros use some common definitions, or see the [[https://github.com/meekrosoft/fff][fake function framework]] for a usage example.
 
-   The argument counting macros use some common definitions, or see the [[https://github.com/meekrosoft/fff][fake function framework]] for a usage example.
-
-   #+BEGIN_SRC ruby
-     ppi = PPIterators.new(127);
-     puts <<~EOH
-     # Define the counting macros PP_NARG and PP_NARG_MINUS2_N
-     #{ppi.narg_common}
-     #{ppi.narg}
-     #{ppi.narg_minus(2)}
-
-     # Define PP_EACH(...)
-     #{ppi.each}
-     EOH
-   #+END_SRC
+#+BEGIN_SRC ruby
+  ppi = PPIterators.new(127);
+  puts <<~EOH
+  # Define the counting macros PP_NARG and PP_NARG_MINUS2_N
+  #{ppi.narg_common}
+  #{ppi.narg}
+  #{ppi.narg_minus(2)}
+  # Define PP_EACH(...)
+  #{ppi.each}
+  EOH
+#+END_SRC
 
 * Usage example :: auto-generation of string descriptors for an enum type
-
   The file [[file:enum.h][enum.h]] uses =PP_EACH= to support autogeneration of textual descriptions of enum members. This saves some repetition and eliminates the risk of forgetting to update the tag when adding/re-arranging members.
 
 ** my_tagged_enum.h
 
 *** Untyped enum
 
-    #+BEGIN_SRC c
-      #include "enum.h"
-      #define FavouritePiperIds                   \
-          WILLIE_CLANCY,                          \
-          SEAMUS_ENNIS,                           \
-          TOMMY_RECK
+#+BEGIN_SRC c
+  #include "pp_enum.h"
+  #define FavouritePiperIds                   \
+      WILLIE_CLANCY,                          \
+      SEAMUS_ENNIS,                           \
+      TOMMY_RECK
 
-      TAGGED_ENUM(FavouritePiper);
-    #+END_SRC
+  TAGGED_ENUM(FavouritePiper);
+#+END_SRC
 
-    ... which expands to ...
+ ... which expands to ...
 
-    #+BEGIN_SRC c
-      #include "enum.h"
-      #define FavouritePiperIds                   \
-          WILLIE_CLANCY,                          \
-          SEAMUS_ENNIS,                           \
-          TOMMY_RECK
+#+BEGIN_SRC c
+  #include "pp_enum.h"
+  #define FavouritePiperIds                   \
+      WILLIE_CLANCY,                          \
+      SEAMUS_ENNIS,                           \
+      TOMMY_RECK
 
-      enum FavouritePiper {
-          WILLIE_CLANCY,
-          SEAMUS_ENNIS,
-          TOMMY_RECK,
-          FavouritePiper_COUNT
-      };
+  enum FavouritePiper {
+      WILLIE_CLANCY,
+      SEAMUS_ENNIS,
+      TOMMY_RECK,
+      FavouritePiper_COUNT
+  };
 
-      char const * FavouritePiper_asCString(int id);
-    #+END_SRC
+  char const * FavouritePiper_asCString(int id);
+#+END_SRC
 
 *** Typed enum
 
-    #+BEGIN_SRC c
-      #include "enum.h"
-      #define FavouritePiperIds                       \
-          WILLIE_CLANCY,                              \
-              SEAMUS_ENNIS,                           \
-              TOMMY_RECK
+#+BEGIN_SRC c
+  #include "pp_enum.h"
+  #define FavouritePiperIds                    \
+      WILLIE_CLANCY,                           \
+      SEAMUS_ENNIS,                            \
+      TOMMY_RECK
 
-      TAGGED_ENUM_TYPE(FavouritePiper);
+  TAGGED_ENUM_TYPE(FavouritePiper);
     #+END_SRC
 
     ... which expands to ...
 
-    #+BEGIN_SRC c
-      #include "enum.h"
-      #define FavouritePiperIds                       \
-          WILLIE_CLANCY,                              \
-              SEAMUS_ENNIS,                           \
-              TOMMY_RECK
+#+BEGIN_SRC c
+  #include "pp_enum.h"
+  #define FavouritePiperIds                    \
+      WILLIE_CLANCY,                           \
+      SEAMUS_ENNIS,                            \
+      TOMMY_RECK
 
-      typedef enum {
-          WILLIE_CLANCY,
-          SEAMUS_ENNIS,
-          TOMMY_RECK,
-          FavouritePiper_COUNT
-      } FavouritePiper;
+  typedef enum {
+      WILLIE_CLANCY,
+      SEAMUS_ENNIS,
+      TOMMY_RECK,
+      FavouritePiper_COUNT
+  } FavouritePiper;
 
-      char const * FavouritePiper_asCString(int id);
-    #+END_SRC
+  char const * FavouritePiper_asCString(int id);
+#+END_SRC
 
 ** my_tagged_enum.c
 
 *** Automatic tag generation
-    (This uses the =PP_EACH= macro)
+(This uses the =PP_EACH= macro)
+Assuming =my_tagged_enum.h= contains the listing provided above for either the typed or untyped enum example...
 
-    #+BEGIN_SRC c
-      #include "my_tagged_enum.h"
+#+BEGIN_SRC c
+  #include "my_tagged_enum.h"
 
-      ENUM_DESCRIBE(FavouritePiper);
-    #+END_SRC
+  ENUM_DESCRIBE(FavouritePiper);
+#+END_SRC
 
     ... which expands to ...
 
-    #+BEGIN_SRC c
-      #include "my_tagged_enum.h"
+#+BEGIN_SRC c
+  #include "my_tagged_enum.h"
 
-      static char const * FavouritePiper_TAGS[] = {
-          "WILLIE_CLANCY",
-          "SEAMUS_ENNIS",
-          "TOMMY_RECK",
-      };
+  static char const * FavouritePiper_TAGS[] = {
+      "WILLIE_CLANCY",
+      "SEAMUS_ENNIS",
+      "TOMMY_RECK",
+  };
 
-      char const * FavouritePiper_asCString(int id) { return id < FavouritePiper_COUNT ? FavouritePiper_TAGS[id] : "UNDEFINED"; }
+  char const * FavouritePiper_asCString(int id) { return id < FavouritePiper_COUNT ? FavouritePiper_TAGS[id] : "UNDEFINED"; }
     #+END_SRC
 
 *** Custom tag definition
-    This sacrifices the protection against re-arrangement of members, but should at least ensure that your compiler warns you if the number of tags doesn't match the number of enum members.
+This sacrifices the protection against re-arrangement of members, but should at least ensure that your compiler warns you if the number of tags doesn't match the number of enum members.
 
-    #+BEGIN_SRC c
-      #include "my_tagged_enum.h"
+#+BEGIN_SRC c
+  #include "my_tagged_enum.h"
 
-      ENUM_DESCRIBE_EXPLICIT(FavouritePiper,
-                             "Willie Clancy",
-                             "Seamus Ennis",
-                             "Tommy Reck"
-          );
-    #+END_SRC
+  ENUM_DESCRIBE_EXPLICIT(FavouritePiper,
+                         "Willie Clancy",
+                         "Seamus Ennis",
+                         "Tommy Reck"
+      );
+#+END_SRC
 
-    ... which expands to ...
+... which expands to ...
 
-    #+BEGIN_SRC c
-      #include "my_tagged_enum.h"
+#+BEGIN_SRC c
+  #include "my_tagged_enum.h"
 
-      static char const * FavouritePiper_TAGS[] = {
-          "Willie Clancy",
-          "Seamus Ennis",
-          "Tommy Reck"
-      };
+  static char const * FavouritePiper_TAGS[] = {
+      "Willie Clancy",
+      "Seamus Ennis",
+      "Tommy Reck"
+  };
 
-      char const * FavouritePiper_asCString(int id) { return id < FavouritePiper_COUNT ? FavouritePiper_TAGS[id] : "UNDEFINED"; }
-    #+END_SRC
+  char const * FavouritePiper_asCString(int id) { return id < FavouritePiper_COUNT ? FavouritePiper_TAGS[id] : "UNDEFINED"; }
+#+END_SRC
 
+
+* Unit tests
+There are some basic unit tests here: [[./test/pp_iter_test.cpp]].
+
+** Building unit tests
+#+begin_src sh :results verbatim
+  mkdir -p build
+  pushd build
+  cmake ..
+  cmake --build .
+  popd
+#+end_src
+
+#+RESULTS:
+#+begin_example
+~/dev/c/va_args_iterators/build ~/dev/c/va_args_iterators
+Re-run cmake no build system arguments
+-- The C compiler identification is GNU 12.1.0
+-- The CXX compiler identification is GNU 12.1.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/cormacc/dev/c/va_args_iterators/build
+/usr/bin/cmake -S/home/cormacc/dev/c/va_args_iterators -B/home/cormacc/dev/c/va_args_iterators/build --check-build-system CMakeFiles/Makefile.cmake 0
+/usr/bin/cmake -E cmake_progress_start /home/cormacc/dev/c/va_args_iterators/build/CMakeFiles /home/cormacc/dev/c/va_args_iterators/build//CMakeFiles/progress.marks
+/usr/bin/make  -f CMakeFiles/Makefile2 all
+make[1]: Entering directory '/home/cormacc/dev/c/va_args_iterators/build'
+/usr/bin/make  -f CMakeFiles/tests.dir/build.make CMakeFiles/tests.dir/depend
+make[2]: Entering directory '/home/cormacc/dev/c/va_args_iterators/build'
+cd /home/cormacc/dev/c/va_args_iterators/build && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/cormacc/dev/c/va_args_iterators /home/cormacc/dev/c/va_args_iterators /home/cormacc/dev/c/va_args_iterators/build /home/cormacc/dev/c/va_args_iterators/build /home/cormacc/dev/c/va_args_iterators/build/CMakeFiles/tests.dir/DependInfo.cmake --color=
+make[2]: Leaving directory '/home/cormacc/dev/c/va_args_iterators/build'
+/usr/bin/make  -f CMakeFiles/tests.dir/build.make CMakeFiles/tests.dir/build
+make[2]: Entering directory '/home/cormacc/dev/c/va_args_iterators/build'
+[ 50%] Building CXX object CMakeFiles/tests.dir/test/pp_iter_test.cpp.o
+/usr/bin/c++  -I/home/cormacc/dev/c/va_args_iterators -I/home/cormacc/dev/c/va_args_iterators/vendor/catch -std=gnu++20 -MD -MT CMakeFiles/tests.dir/test/pp_iter_test.cpp.o -MF CMakeFiles/tests.dir/test/pp_iter_test.cpp.o.d -o CMakeFiles/tests.dir/test/pp_iter_test.cpp.o -c /home/cormacc/dev/c/va_args_iterators/test/pp_iter_test.cpp
+[100%] Linking CXX executable tests
+/usr/bin/cmake -E cmake_link_script CMakeFiles/tests.dir/link.txt --verbose=1
+/usr/bin/c++ -rdynamic CMakeFiles/tests.dir/test/pp_iter_test.cpp.o -o tests
+make[2]: Leaving directory '/home/cormacc/dev/c/va_args_iterators/build'
+[100%] Built target tests
+make[1]: Leaving directory '/home/cormacc/dev/c/va_args_iterators/build'
+/usr/bin/cmake -E cmake_progress_start /home/cormacc/dev/c/va_args_iterators/build/CMakeFiles 0
+~/dev/c/va_args_iterators
+#+end_example
+
+** Running unit tests
+#+begin_src sh :results verbatim
+./build/tests
+#+end_src
+
+#+RESULTS:
+: ===============================================================================
+: All tests passed (20 assertions in 4 test cases)
+:
 
 * References / prior art
 - I initially encountered the variadic macro counting logic in [[https://groups.google.com/forum/#!topic/comp.std.c/d-6Mj5Lko_s][this post]] by Laurent Deniau. His solution was refined by arpad. and zhangj to handle the no-argument case.
