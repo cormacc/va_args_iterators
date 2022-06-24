@@ -288,19 +288,19 @@ EOH
 
   def pp_list_each
     <<-'EOH'
-#define PP_LIST_EACH(TF, ...) \
-  EVAL(_PP_LIST_EACH_DEFER(TF, __VA_ARGS__))
+#define PP_COMMA_EACH(TF, ...) \
+  EVAL(_PP_COMMA_EACH_DEFER(TF, __VA_ARGS__))
 
-#define _PP_LIST_EACH_DEFER(TF, ...) \
+#define _PP_COMMA_EACH_DEFER(TF, ...) \
   IF ( NOT_EMPTY( __VA_ARGS__ )  ) \
   ( \
     DEFER(TF) (OPT_DEPAREN(HEAD(__VA_ARGS__))) \
     IF ( NOT_EMPTY(TAIL(__VA_ARGS__))) (PP_COMMA()) \
-    DEFER2 ( __PP_LIST_EACH_DEFER ) () (TF, TAIL(__VA_ARGS__)) \
+    DEFER2 ( __PP_COMMA_EACH_DEFER ) () (TF, TAIL(__VA_ARGS__)) \
   )
 
-//This indirection along with the DEFER2 and EVAL macros allows the recursive implementation of _PP_LIST_EACH_DEFER
-#define __PP_LIST_EACH_DEFER() _PP_LIST_EACH_DEFER
+//This indirection along with the DEFER2 and EVAL macros allows the recursive implementation of _PP_COMMA_EACH_DEFER
+#define __PP_COMMA_EACH_DEFER() _PP_COMMA_EACH_DEFER
 EOH
   end
 
@@ -356,7 +356,7 @@ EOH
   end
 
   def list_each
-    CFile::include_guard('PP_LIST_EACH', pp_list_each)
+    CFile::include_guard('PP_COMMA_EACH', pp_list_each)
   end
 
   def generate_header
@@ -454,7 +454,7 @@ EOH
 //PP_COMMA
 #{comma}
 
-//PP_LIST_EACH
+//PP_COMMA_EACH
 #{list_each}
 
 EOH

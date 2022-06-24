@@ -8,6 +8,7 @@
     - [[#pp_eachtf-][PP_EACH(TF, ...)]]
     - [[#pp_each_idxtf-][PP_EACH_IDX(TF, ...)]]
     - [[#pp_par_each_idxtf-fixed_args-][PP_PAR_EACH_IDX(TF, (FIXED_ARGS), ...)]]
+    - [[#pp_comma_eachtf-][PP_COMMA_EACH(TF, ...)]]
     - [[#deprecated-macros][Deprecated macros]]
   - [[#generator][Generator]]
 - [[#usage-example--auto-generation-of-string-descriptors-for-an-enum-type][Usage example :: auto-generation of string descriptors for an enum type]]
@@ -75,6 +76,14 @@ for shorthand verification of function calls, i.e.
       TEST_ASSERT_CALLED(FN);                                     \
       PP_PAR_EACH_IDX(_FFF_VERIFY_PARAMETER_, (FN), __VA_ARGS__)
 #+END_SRC
+
+*** PP_COMMA_EACH(TF, ...)
+A variant of PP_EACH that comma-separates the results of transformation.
+This is useful if you need to generate a list of arguments to a function.
+=pp_iter.h= uses PP_EACH in a related context define an enum type, however it generates a trailing ',', which is valid syntax for an enum definition or array initalisation, but not for a function call.
+
+Contributed by [[https://github.com/ondrejpopp][OndrejPopp]]
+
 
 *** Deprecated macros
 
