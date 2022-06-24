@@ -280,9 +280,27 @@ EOH
 EOH
   end
 
+  def pp_comma
+    <<-'EOH'
+#define PP_COMMA() ,
+EOH
+  end
+
   def pp_list_each
     <<-'EOH'
-//!!!IMPLEMENT ME!!!
+#define PP_LIST_EACH(TF, ...) \
+  EVAL(_PP_LIST_EACH_DEFER(TF, __VA_ARGS__))
+
+#define _PP_LIST_EACH_DEFER(TF, ...) \
+  IF ( NOT_EMPTY( __VA_ARGS__ )  ) \
+  ( \
+    DEFER(TF) (OPT_DEPAREN(HEAD(__VA_ARGS__))) \
+    IF ( NOT_EMPTY(TAIL(__VA_ARGS__))) (PP_COMMA()) \
+    DEFER2 ( __PP_LIST_EACH_DEFER ) () (TF, TAIL(__VA_ARGS__)) \
+  )
+
+//This indirection along with the DEFER2 and EVAL macros allows the recursive implementation of _PP_LIST_EACH_DEFER
+#define __PP_LIST_EACH_DEFER() _PP_LIST_EACH_DEFER
 EOH
   end
 
@@ -331,6 +349,10 @@ EOH
   def parameterised_each_with_index_n(n)
     fargs = (1..n).map { |aidx| "P#{aidx}"}.join(", ")
     CFile::define_macro("PP_#{n}PAR_EACH_IDX(TF, #{fargs}, ...) PP_PAR_EACH_IDX(TF, (#{fargs}), __VA_ARGS__)")
+  end
+
+  def comma
+    CFile::include_guard('PP_COMMA', pp_comma)
   end
 
   def list_each
@@ -428,6 +450,9 @@ EOH
 //PP_xPAR_EACH_IDX (Wrappers for deprecated macros)
 #{parameterised_each_with_index_n(1)}
 #{parameterised_each_with_index_n(2)}
+
+//PP_COMMA
+#{comma}
 
 //PP_LIST_EACH
 #{list_each}
