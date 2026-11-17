@@ -40,7 +40,9 @@ In my experience, MSVC appears to enforce the 127-argument limit, whereas gcc ha
 
 With =__VA_OPT__=, =PP_NARG()= evaluates to 0, and the iteration macros accept an empty argument list, in every language mode.
 
-The =non-recursive= branch of this repository has an older generator that supports preprocessors without =__VA_OPT__= or recursion, including the traditional MSVC preprocessor.
+For a preprocessor without =__VA_OPT__=, use an earlier version:
+- The =legacy-preprocessors= tag is the last version without the =__VA_OPT__= requirement. It uses =__VA_OPT__= when available, else the GCC =, ##__VA_ARGS__= extension, else a standard-only fallback that cannot count zero arguments.
+- The =non-recursive= branch has an older generator that can also generate =pp_iter.h= without recursion, for preprocessors such as the traditional MSVC preprocessor.
 
 * Usage instructions
 

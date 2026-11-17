@@ -45,4 +45,4 @@ Tasks are in `TASKS.org` (org-tasks protocol; use the `ot` CLI, e.g. `ot list`, 
 - `README.org` and the comments in `pp_enum.h` refer to `enum.h`; the file is `pp_enum.h`.
 - `README.org` and the comments in `pp_enum.h` name the member-list macro `<Name>Ids`; the code expands `<Name>Tags`.
 - `PP_1PAR_EACH_IDX`/`PP_2PAR_EACH_IDX` are deprecated wrappers for `PP_PAR_EACH_IDX(TF, (FIXED_ARGS), ...)`. Their tests are commented out.
-- The remote branch `non-recursive` holds a generator variant that does not use recursion (for preprocessors that cannot do it). `master` does not have this option.
+- The tag `legacy-preprocessors` (`e6a5190`) is the last version with fallbacks for preprocessors without `__VA_OPT__`, and the remote branch `non-recursive` holds a generator variant that does not use recursion. `README.org` points users to both. Do not reintroduce either on `master`.
