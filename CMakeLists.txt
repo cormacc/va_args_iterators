@@ -1,8 +1,9 @@
-cmake_minimum_required(VERSION 3.1)
+# <min>...<max>: 3.12 is the first release that knows CXX_STANDARD 20;
+# policies follow the newest release tested (4.4), or the running CMake if older.
+cmake_minimum_required(VERSION 3.12...4.4)
 # Catch uses noexcept
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-cmake_policy(SET CMP0054 NEW)
 
 project(cmake_test)
 
@@ -17,8 +18,7 @@ add_executable(tests ${TEST_SOURCES})
 target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(tests Catch)
 
-#Enable MSVC compliant preprocessor
-#target_compile_options(tests $<$<CXX_COMPILER_ID:MSVC>:/experimental:preprocessor>)
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} /experimental:preprocessor /wd5105")
-endif()
+# The macros need a conformant preprocessor (MSVC >= VS 2019 16.5).
+# C5105 ("macro expansion producing 'defined' has undefined behavior") fires on
+# PP_IS_GCC_EXTENDED and related feature macros in pp_iter.h.
+target_compile_options(tests PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor;/wd5105>")
