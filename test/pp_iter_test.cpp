@@ -33,7 +33,7 @@ SCENARIO("NOT") {
     REQUIRE( NOT(_INDIRECT(9)) == 0 );
   }
 
-  #if PP_IS_GCC_EXTENDED
+  #if PP_HAS_VA_OPT || PP_IS_GCC_EXTENDED
   GIVEN("should handle counting 0 args") {
     REQUIRE( NOT(PP_NARG()) == 1 );
   }
@@ -81,7 +81,7 @@ SCENARIO("IS_EMPTY") {
 }
 
 SCENARIO("PP_NARG") {
-  #if PP_IS_GCC_EXTENDED
+  #if PP_HAS_VA_OPT || PP_IS_GCC_EXTENDED
   GIVEN("should count no arguments") {
     REQUIRE( PP_NARG() == 0 );
   }
@@ -115,7 +115,7 @@ void accumulate(int next)
 SCENARIO("PP_EACH") {
   calls = sum = accumulated_values[0] = 0;
   GIVEN("wrapped function") {
-  #if PP_IS_GCC_EXTENDED
+  #if PP_HAS_VA_OPT || PP_IS_GCC_EXTENDED
     WHEN("no additional arguments specified") {
       PP_EACH(accumulate);
 
