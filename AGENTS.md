@@ -34,7 +34,7 @@ Tasks are in `TASKS.org` (org-tasks protocol; use the `ot` CLI, e.g. `ot list`, 
 - Each group has its own include guard (`PP_EACH`, `PP_NARG`, `DEFER`, `EVAL`, ...), so the macros can be embedded in other headers without a clash.
 - Iteration (`PP_EACH`, `PP_EACH_IDX`, `PP_PAR_EACH_IDX`, `PP_COMMA_EACH`) is recursive. It uses `DEFER`/`EVAL` and pattern-matching macros (`IF`, `NOT`, `PP_MATCHER`, tuple-aware `CAT`), after Saad Ahmad's blog posts. The `EVAL` depth is `ceil(log2(limit))` levels. Indices come from `PP_SEQ_N()`, so the argument limit also bounds the index range.
 - `PP_NARG` and `IS_EMPTY` have two implementations: one uses the GCC `, ##__VA_ARGS__` extension, and one is standard-conformant (`PP_IS_GCC_EXTENDED`, `PP_IS_MSVC_EXPERIMENTAL`). Zero-argument counting works only with GCC extensions; the test for it is guarded by `#if PP_IS_GCC_EXTENDED`.
-- `pp_enum.h` is hand-written. It builds on `pp_iter.h` and provides `TAGGED_ENUM`, `TAGGED_ENUM_TYPE`, `ENUM_DESCRIBE` and `ENUM_DESCRIBE_EXPLICIT`, which generate `<Name>_COUNT` and `<Name>_asCString`. It reads the member list from a user macro named `<Name>Ids`. The unit tests do not cover it.
+- `pp_enum.h` is hand-written. It builds on `pp_iter.h` and provides `TAGGED_ENUM`, `TAGGED_ENUM_TYPE`, `ENUM_DESCRIBE` and `ENUM_DESCRIBE_EXPLICIT`, which generate `<Name>_COUNT` and `<Name>_asCString`. It reads the member list from a user macro named `<Name>Tags` (`ENUM` uses `NAME##Tags`). The unit tests do not cover it.
 - `test/pp_iter_test.cpp` is the only test source (`SCENARIO` blocks for each macro). The 63-argument tests in `PP_NARG` and `PP_EACH` assume the default limit, so a header generated with a lower `--limit` does not compile against them.
 - MSVC needs its conformant preprocessor (`/Zc:preprocessor`, VS 2019 16.5 or later), which `CMakeLists.txt` sets. MSVC support is optional and untested; only current versions matter. MSVC enforces the C standard minimum of 127 macro arguments; this is why the default limit is 63.
 
@@ -42,5 +42,6 @@ Tasks are in `TASKS.org` (org-tasks protocol; use the `ot` CLI, e.g. `ot list`, 
 
 - `README.org` shows `PPIterators.new(127)`, but the constructor takes keyword arguments: `PPIterators.new(nargs_max: 127)`.
 - `README.org` and the comments in `pp_enum.h` refer to `enum.h`; the file is `pp_enum.h`.
+- `README.org` and the comments in `pp_enum.h` name the member-list macro `<Name>Ids`; the code expands `<Name>Tags`.
 - `PP_1PAR_EACH_IDX`/`PP_2PAR_EACH_IDX` are deprecated wrappers for `PP_PAR_EACH_IDX(TF, (FIXED_ARGS), ...)`. Their tests are commented out.
 - The remote branch `non-recursive` holds a generator variant that does not use recursion (for preprocessors that cannot do it). `master` does not have this option.
