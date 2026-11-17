@@ -1,0 +1,10 @@
+#+TITLE: Project Tasks
+#+LINK: task file:TASKS.org::#%s
+#+LINK: archive file:TASKS.archive.org::#%s
+#+LINK: plan file:design/log/%s
+#+LINK: proj file:%s
+#+SETUPFILE: ./TASKS.local.org
+#+SETUPFILE: ./TASKS.setup.org
+#+ARCHIVE: TASKS.archive.org::* From %s
+
+* Improvements

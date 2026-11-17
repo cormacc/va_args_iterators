@@ -1,0 +1,5 @@
+#+TODO: TODO(t) STARTED(s!) WAITING(w@/!) | DONE(d!) CANCELLED(c!)
+#+STARTUP: logdone logdrawer
+#+LINK: proj file:../../%s
+#+LINK: task file:../../TASKS.org::#%s
+#+LINK: archive file:../../TASKS.archive.org::#%s
