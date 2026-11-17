@@ -36,7 +36,11 @@ The C99 and C11 standard specifies that a compiler must handle a program with a 
 In my experience, MSVC appears to enforce the 127-argument limit, whereas gcc handled 512 without difficulties (didn't test any higher arg count).
 
 * Compiler compatibility
-This implementation has been tested with clang and with numerous versions of gcc (desktop and embedded) without issue. I haven't tested recently with MSVC (and life's too short...) but if you encounter issues, the =non-recursive= branch of this repository includes a version of the ruby generator that can optionally not use tail recursion and generate a functional but much more verbose version of =pp_iter.h=. Check out that branch for further information.
+=pp_iter.h= requires a preprocessor that supports =__VA_OPT__=, and stops with =#error= if it does not. =__VA_OPT__= is standard in C++20 and C23, and GCC also accepts it in older C and C++ modes (with a warning under =-pedantic= in strict modes such as =-std=c99=). The oldest compiler tested is Microchip XC-DSC v4.00 (based on GCC 8.3.1). MSVC needs its conformant preprocessor (=/Zc:preprocessor=, Visual Studio 2019 16.5 or later); it is not tested.
+
+With =__VA_OPT__=, =PP_NARG()= evaluates to 0, and the iteration macros accept an empty argument list, in every language mode.
+
+The =non-recursive= branch of this repository has an older generator that supports preprocessors without =__VA_OPT__= or recursion, including the traditional MSVC preprocessor.
 
 * Usage instructions
 
@@ -317,4 +321,3 @@ make[1]: Leaving directory '/home/cormacc/dev/c/va_args_iterators/build'
 - The (preferred) recursive implementations of PP_EACH, PP_EACH_IDX and PP_PAR_EACH_IDX are based on an [[http://saadahmad.ca/cc-preprocessor-metaprogramming-2/][excellent series of posts]] by Saad Ahmad.
 - The non- (or semi-) recursive PP_EACH implementation is based on [[https://codecraft.co/2014/11/25/variadic-macros-tricks/][this blog post]] by Daniel Hardman.
 - The non-recursive PP_EACH_IDX and PP_PAR_EACH_IDX macro implementations extend the non-recursive PP_EACH implementation described in [[http://ptspts.blogspot.ie/2013/11/how-to-apply-macro-to-all-arguments-of.html][this (anonymous) blog post]].
-- The MSVC macro expansion fix was lifted from the excellent [[https://github.com/meekrosoft/fff][fake function framework]].

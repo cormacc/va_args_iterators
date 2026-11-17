@@ -30,19 +30,6 @@ class PPIterators
         "#ifndef #{name}\n" + indent(content) + "#endif //#{name}\n"
       end
 
-      def if_gcc_extensions_available(with_gcc, without_gcc)
-        "#if defined(__GNUC__) && !defined(__STRICT_ANSI__)\n" + indent(with_gcc) + "#else\n" + indent(without_gcc) + "#endif\n"
-      end
-
-      # PP_HAS_VA_OPT is defined by PPIterators#narg_common
-      def if_va_opt_available(with_va_opt, without_va_opt)
-        "#if PP_HAS_VA_OPT\n" + indent(with_va_opt) + "#else\n" + indent(without_va_opt) + "#endif\n"
-      end
-
-      def if_preprocessor_compliant(with_gcc, without_gcc)
-        "#if (defined(__GNUC__) && !defined(__STRICT_ANSI__)) || (defined(_MSVC_TRADITIONAL) && !_MSVC_TRADITIONAL)\n" + indent(with_gcc) + "#else\n" + indent(without_gcc) + "#endif\n"
-      end
-
       def define_macro(m)
         m.empty? ? m : "\#define #{m}\n"
       end
@@ -173,34 +160,8 @@ EOH
 )
   end
 
-  IS_EMPTY_NO_GCC_EXTENSIONS = <<-EOH
-IS_EMPTY(...) \
-_ISEMPTY(\
-          /* test if there is just one argument, eventually an empty one */\
-          HAS_COMMA(__VA_ARGS__),\
-          /* test if _TRIGGER_PARENTHESIS_ together with the argument adds a comma */\
-          HAS_COMMA(_TRIGGER_PARENTHESIS_ __VA_ARGS__),\
-          /* test if the argument together with a parenthesis adds a comma */\
-          HAS_COMMA(__VA_ARGS__ (/*empty*/)),\
-          /* test if placing it between _TRIGGER_PARENTHESIS_ and the parenthesis adds a comma */\
-          HAS_COMMA(_TRIGGER_PARENTHESIS_ __VA_ARGS__ (/*empty*/))\
-          )
-EOH
-
   def is_empty
-    is_empty_from_narg = CFile::define_macro("IS_EMPTY(...)  NOT(PP_NARG(__VA_ARGS__))")
-    is_empty_from_commas = CFile::define_macros([
-                                                 IS_EMPTY_NO_GCC_EXTENSIONS,
-                                                 "_ISEMPTY(_0, _1, _2, _3) HAS_COMMA(PASTE5(_IS_EMPTY_CASE_, _0, _1, _2, _3))",
-                                                 "HAS_COMMA(...) PP_ARG_N(__VA_ARGS__, #{'1, '*(@nargs_max-1)} 0)",
-                                                 "_TRIGGER_PARENTHESIS_(...) ,",
-                                                 "PASTE5(_0, _1, _2, _3, _4) _0 ## _1 ## _2 ## _3 ## _4",
-                                                 "_IS_EMPTY_CASE_0001 ,"
-                                               ])
-    CFile::if_va_opt_available(
-      is_empty_from_narg,
-      CFile::if_gcc_extensions_available(is_empty_from_narg, is_empty_from_commas)
-    )
+    CFile::define_macro("IS_EMPTY(...)  NOT(PP_NARG(__VA_ARGS__))")
   end
 
   def lists
@@ -238,8 +199,6 @@ EOH
   def narg_common
     CFile::define_macro_set('PP_UTIL',
                             [
-                              # Fix for MSVC expansion order (nicked from fff project)
-                              "EXPAND(x) x",
                               "PP_SEQ_N() #{arg_seq(last: @nargs_max)}",
                               "PP_RSEQ_N() #{arg_seq(last: @nargs_max, reverse: true)}",
                               # PP_HAS_VA_OPT is 1 if __VA_OPT__(,) expands to a comma, which shifts the 1 into third place
@@ -247,12 +206,16 @@ EOH
                               "_PP_VA_OPT_PROBE(...) _PP_THIRD_ARG(__VA_OPT__(,), 1, 0, )",
                               "PP_HAS_VA_OPT _PP_VA_OPT_PROBE(?)"
                             ]
-                           )
+                           ) + <<-EOH
+#if !PP_HAS_VA_OPT
+  #error "pp_iter.h requires a preprocessor with __VA_OPT__ support (for MSVC, use /Zc:preprocessor)"
+#endif
+EOH
   end
 
-  # Counting zero arguments needs a leading _0 placeholder, so one more slot
-  def arg_n_seq(delta, counts_zero)
-    seq = arg_seq(first: 1, last: counts_zero ? @nargs_max+1 : @nargs_max, prefix: '_')
+  # The leading _0 placeholder in PP_NARG needs one more slot than nargs_max
+  def arg_n_seq(delta)
+    seq = arg_seq(first: 1, last: @nargs_max+1, prefix: '_')
     delta==0 ? seq :[arg_seq(first: 0, last: delta-1, prefix: '__', reverse: true), seq].join(', ')
   end
 
@@ -261,23 +224,17 @@ EOH
   end
 
   # The leading _0 placeholder lets the argument list be empty;
-  # __VA_OPT__ or the GCC ', ##' extension drops the comma that follows it.
-  NARG_PREFIX = { va_opt: '_0 __VA_OPT__(,) ', gcc: '_0, ##', std: '' }
-
-  def _narg_minus(m, mode)
-    suffix = m>0 ? "_MINUS#{m}" : ''
-    CFile::define_macros(["PP_NARG#{suffix}(...)  EXPAND(PP_ARG#{suffix}_N(#{NARG_PREFIX.fetch(mode)}__VA_ARGS__, PP_RSEQ_N()))",
-                          "_PP_ARG#{suffix}_N(#{arg_n_seq(m, mode != :std)}, N, ...) N"
-                         ])
-  end
-
+  # __VA_OPT__(,) emits the comma after it only when there are arguments.
+  # PP_ARG_N is an indirection so that PP_RSEQ_N() expands before _PP_ARG_N counts its arguments.
   def narg_minus(m)
     suffix = m>0 ? "_MINUS#{m}" : ''
-    CFile::include_guard("PP_NARG#{suffix}",
-                         CFile::define_macro("PP_ARG#{suffix}_N(...) EXPAND(_PP_ARG#{suffix}_N(__VA_ARGS__))")+
-                         CFile::if_va_opt_available(_narg_minus(m, :va_opt),
-                                                    CFile::if_gcc_extensions_available(_narg_minus(m, :gcc), _narg_minus(m, :std)))
-                        )
+    CFile::define_macro_set("PP_NARG#{suffix}",
+                            [
+                              "PP_ARG#{suffix}_N(...) _PP_ARG#{suffix}_N(__VA_ARGS__)",
+                              "PP_NARG#{suffix}(...) PP_ARG#{suffix}_N(_0 __VA_OPT__(,) __VA_ARGS__, PP_RSEQ_N())",
+                              "_PP_ARG#{suffix}_N(#{arg_n_seq(m)}, N, ...) N"
+                            ]
+                           )
   end
 
   def pp_each
@@ -407,8 +364,7 @@ EOH
  * described in this (anonymous) blog post:
  * http://ptspts.blogspot.ie/2013/11/how-to-apply-macro-to-all-arguments-of.html
  *
- * The MSVC macro expansion fix was lifted from the excellent fake function framework:
- * https://github.com/meekrosoft/fff
+ * Requires a preprocessor with __VA_OPT__ support (standard in C++20 and C23; MSVC needs /Zc:preprocessor).
  */
 
 #ifndef PP_ITER_H
@@ -430,10 +386,9 @@ EOH
 
   def embed_macros
     <<-EOH
-//Preprocessor features
-#define PP_IS_GCC_EXTENDED (defined(__GNUC__) && !defined(__STRICT_ANSI__))
-#define PP_IS_MSVC_EXPERIMENTAL (defined(_MSVC_TRADITIONAL) && !_MSVC_TRADITIONAL)
-#define PP_IS_CONFORMANT (PP_IS_GCC_EXTENDED || PP_IS_MSVC_EXPERIMENTAL)
+//Argument counting (first, so that a missing __VA_OPT__ is reported before anything else)
+#{narg_common}
+#{narg}
 
 //Defer / evaluate macros
 #{defer}
@@ -444,10 +399,6 @@ EOH
 
 //Logical operations
 #{logical}
-
-//Argument counting (defines PP_HAS_VA_OPT, which IS_EMPTY tests with #if)
-#{narg_common}
-#{narg}
 
 //Lists (HEAD, TAIL, ISEMPTY etc.)
 #{lists}

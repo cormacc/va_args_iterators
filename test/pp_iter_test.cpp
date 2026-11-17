@@ -33,11 +33,9 @@ SCENARIO("NOT") {
     REQUIRE( NOT(_INDIRECT(9)) == 0 );
   }
 
-  #if PP_HAS_VA_OPT || PP_IS_GCC_EXTENDED
   GIVEN("should handle counting 0 args") {
     REQUIRE( NOT(PP_NARG()) == 1 );
   }
-  #endif
 
   GIVEN("should handle counting multiple args") {
     REQUIRE( NOT(PP_NARG(1, 2, 3)) == 0 );
@@ -81,11 +79,9 @@ SCENARIO("IS_EMPTY") {
 }
 
 SCENARIO("PP_NARG") {
-  #if PP_HAS_VA_OPT || PP_IS_GCC_EXTENDED
   GIVEN("should count no arguments") {
     REQUIRE( PP_NARG() == 0 );
   }
-  #endif
 
   GIVEN("should count non-zero arguments") {
     REQUIRE(13 == PP_NARG(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13));
@@ -115,7 +111,6 @@ void accumulate(int next)
 SCENARIO("PP_EACH") {
   calls = sum = accumulated_values[0] = 0;
   GIVEN("wrapped function") {
-  #if PP_HAS_VA_OPT || PP_IS_GCC_EXTENDED
     WHEN("no additional arguments specified") {
       PP_EACH(accumulate);
 
@@ -123,7 +118,6 @@ SCENARIO("PP_EACH") {
         REQUIRE(calls==0);
       }
     }
-  #endif
 
     WHEN("3 additional arguments specified") {
       PP_EACH(ACC, 1, 2, 3);
@@ -157,7 +151,6 @@ SCENARIO("PP_EACH") {
     }
   }
 
-#if PP_IS_CONFORMANT
   GIVEN("stringifying macro") {
     WHEN("applied") {
       PP_EACH(STRINGIFY, a, b, c);
@@ -169,7 +162,6 @@ SCENARIO("PP_EACH") {
       }
     }
   }
-#endif
 
   GIVEN("quoted parameters") {
     WHEN("single quoted") {

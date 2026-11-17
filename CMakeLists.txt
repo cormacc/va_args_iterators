@@ -18,7 +18,6 @@ add_executable(tests ${TEST_SOURCES})
 target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(tests Catch)
 
-# The macros need a conformant preprocessor (MSVC >= VS 2019 16.5).
-# C5105 ("macro expansion producing 'defined' has undefined behavior") fires on
-# PP_IS_GCC_EXTENDED and related feature macros in pp_iter.h.
-target_compile_options(tests PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor;/wd5105>")
+# The macros need __VA_OPT__, which MSVC supports only with its conformant
+# preprocessor (VS 2019 16.5 or later).
+target_compile_options(tests PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>")
