@@ -7,6 +7,79 @@
 // Test includes
 #include <string.h>
 
+SCENARIO("NOT") {
+  GIVEN("should evaluate to 1 given 0") {
+    REQUIRE( NOT(0) == 1 );
+  }
+
+  GIVEN("should evaluate to 0 given 1") {
+    REQUIRE( NOT(1) == 0 );
+  }
+
+  GIVEN("should evaluate to 0 given >1") {
+    REQUIRE( NOT(9) == 0 );
+  }
+
+#define _INDIRECT(x) x
+  GIVEN("should evaluate to 1 given indirect 0") {
+    REQUIRE( NOT(_INDIRECT(0)) == 1 );
+  }
+
+  GIVEN("should evaluate to 0 given indirect 1") {
+    REQUIRE( NOT(_INDIRECT(1)) == 0 );
+  }
+
+  GIVEN("should evaluate to 0 given indirect >1") {
+    REQUIRE( NOT(_INDIRECT(9)) == 0 );
+  }
+
+  #if PP_IS_GCC_EXTENDED
+  GIVEN("should handle counting 0 args") {
+    REQUIRE( NOT(PP_NARG()) == 1 );
+  }
+  #endif
+
+  GIVEN("should handle counting multiple args") {
+    REQUIRE( NOT(PP_NARG(1, 2, 3)) == 0 );
+  }
+}
+
+SCENARIO("NOT_EMPTY") {
+  GIVEN("should evaluate to 0 given no args") {
+    REQUIRE( NOT_EMPTY() == 0 );
+  }
+
+  GIVEN("should evaluate to 1 given 1 arg") {
+    REQUIRE( NOT_EMPTY(3) == 1 );
+  }
+
+  GIVEN("should evaluate to 1 given multiple args") {
+    REQUIRE( NOT_EMPTY(3, b, 4) == 1 );
+  }
+
+  GIVEN("should evaluate to 1 given quoted arg") {
+    REQUIRE( NOT_EMPTY('a') == 1 );
+  }
+}
+
+SCENARIO("IS_EMPTY") {
+  GIVEN("should evaluate to 1 given no args") {
+    REQUIRE( IS_EMPTY() == 1 );
+  }
+
+  GIVEN("should evaluate to 0 given 1 arg") {
+    REQUIRE( IS_EMPTY(3) == 0 );
+  }
+
+  GIVEN("should evaluate to 0 given multiple arg") {
+    REQUIRE( IS_EMPTY(3, b, 4) == 0 );
+  }
+
+  GIVEN("should evaluate to 0 given quoted arg") {
+    REQUIRE( IS_EMPTY('a') == 0 );
+  }
+}
+
 SCENARIO("PP_NARG") {
   #if PP_IS_GCC_EXTENDED
   GIVEN("should count no arguments") {
@@ -28,7 +101,7 @@ SCENARIO("PP_NARG") {
   }
 }
 
-static int accumulated_values[10];
+static int accumulated_values[63];
 static size_t calls;
 static size_t sum;
 void accumulate(int next)
@@ -65,6 +138,23 @@ SCENARIO("PP_EACH") {
         REQUIRE(accumulated_values[2] == 3);
       }
     }
+
+    WHEN("maximum arguments (63) specified") {
+      PP_EACH(ACC,
+              1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+              1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+        )
+
+      THEN("63 calls are made") {
+        REQUIRE(calls==63);
+      }
+
+      THEN("arguments are passed in order") {
+        REQUIRE(accumulated_values[0] == 1);
+        REQUIRE(accumulated_values[32] == 1);
+        REQUIRE(accumulated_values[62] == 31);
+      }
+    }
   }
 
 #if PP_IS_CONFORMANT
@@ -80,6 +170,33 @@ SCENARIO("PP_EACH") {
     }
   }
 #endif
+
+  GIVEN("quoted parameters") {
+    WHEN("single quoted") {
+#define CACHE_CHAR(A) chars[i++] = A;
+      char chars[3];
+      int i = 0;
+      PP_EACH(CACHE_CHAR, 'a', 'b', 'c');
+      THEN("chars handled successfully") {
+        REQUIRE(i==3);
+        REQUIRE(chars[0]=='a');
+        REQUIRE(chars[1]=='b');
+        REQUIRE(chars[2]=='c');
+      }
+    }
+    WHEN("double quoted") {
+#define CACHE_INITIAL(A) chars[i++] = A[0];
+      char chars[3];
+      int i = 0;
+      PP_EACH(CACHE_INITIAL, "a", "b", "c");
+      THEN("chars handled successfully") {
+        REQUIRE(i==3);
+        REQUIRE(chars[0]=='a');
+        REQUIRE(chars[1]=='b');
+        REQUIRE(chars[2]=='c');
+      }
+    }
+  }
 }
 
 typedef struct {
@@ -98,6 +215,29 @@ SCENARIO("PP_EACH_IDX") {
       PP_EACH_IDX(TFEQ, 6, 5, 4);
       THEN("arg index stringifies as expected") {
 
+      }
+    }
+  }
+
+  GIVEN("quoted parameters") {
+    WHEN("single quoted") {
+#define CACHE_CHAR_AT_IDX(A, IDX) chars[IDX] = A;
+      char chars[3];
+      PP_EACH_IDX(CACHE_CHAR_AT_IDX, 'a', 'b', 'c');
+      THEN("chars handled successfully") {
+        REQUIRE(chars[0]=='a');
+        REQUIRE(chars[1]=='b');
+        REQUIRE(chars[2]=='c');
+      }
+    }
+    WHEN("double quoted") {
+#define CACHE_INITIAL_AT_IDX(A, IDX) chars[IDX] = A[0];
+      char chars[3];
+      PP_EACH_IDX(CACHE_INITIAL_AT_IDX, "a", "b", "c");
+      THEN("chars handled successfully") {
+        REQUIRE(chars[0]=='a');
+        REQUIRE(chars[1]=='b');
+        REQUIRE(chars[2]=='c');
       }
     }
   }
@@ -123,6 +263,27 @@ SCENARIO("PP_PAR_EACH_IDX") {
     WHEN("applied") {
       test_struct tested = {.arg0 = 6, .arg1 = 5, .arg2 = 4};
       PP_PAR_EACH_IDX(TFEQ2FIX, (tested.arg, bla), 6, 5, 4);
+      THEN("arg index stringifies as expected") {
+
+      }
+    }
+  }
+
+  GIVEN("macro that uses both of 2 fixed arguments") {
+#define TFEQ2FIX_MUL(FIXED_ARG1, FIXED_ARG2, ARG, ARG_IDX) REQUIRE(ARG*FIXED_ARG1 == FIXED_ARG2##ARG_IDX);
+    WHEN("applied") {
+      test_struct tested = {.arg0 = 6, .arg1 = 4, .arg2 = 2};
+      PP_PAR_EACH_IDX(TFEQ2FIX_MUL, (2, tested.arg), 3, 2, 1);
+      THEN("both fixed arguments are passed in order") {
+
+      }
+    }
+  }
+
+  GIVEN("stringifying macro with 1 unparenthesised fixed argument") {
+    WHEN("applied") {
+      test_struct tested = {.arg0 = 6, .arg1 = 5, .arg2 = 4};
+      PP_PAR_EACH_IDX(TFEQFIX, tested.arg, 6, 5, 4);
       THEN("arg index stringifies as expected") {
 
       }

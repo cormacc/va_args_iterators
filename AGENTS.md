@@ -35,7 +35,7 @@ Tasks are in `TASKS.org` (org-tasks protocol; use the `ot` CLI, e.g. `ot list`, 
 - Iteration (`PP_EACH`, `PP_EACH_IDX`, `PP_PAR_EACH_IDX`, `PP_COMMA_EACH`) is recursive. It uses `DEFER`/`EVAL` and pattern-matching macros (`IF`, `NOT`, `PP_MATCHER`, tuple-aware `CAT`), after Saad Ahmad's blog posts. The `EVAL` depth is `ceil(log2(limit))` levels. Indices come from `PP_SEQ_N()`, so the argument limit also bounds the index range.
 - `PP_NARG` and `IS_EMPTY` have two implementations: one uses the GCC `, ##__VA_ARGS__` extension, and one is standard-conformant (`PP_IS_GCC_EXTENDED`, `PP_IS_MSVC_EXPERIMENTAL`). Zero-argument counting works only with GCC extensions; the test for it is guarded by `#if PP_IS_GCC_EXTENDED`.
 - `pp_enum.h` is hand-written. It builds on `pp_iter.h` and provides `TAGGED_ENUM`, `TAGGED_ENUM_TYPE`, `ENUM_DESCRIBE` and `ENUM_DESCRIBE_EXPLICIT`, which generate `<Name>_COUNT` and `<Name>_asCString`. It reads the member list from a user macro named `<Name>Ids`. The unit tests do not cover it.
-- `test/pp_iter_test.cpp` is the only test source (`SCENARIO` blocks for each macro). The 63-argument test in `PP_NARG` assumes the default limit.
+- `test/pp_iter_test.cpp` is the only test source (`SCENARIO` blocks for each macro). The 63-argument tests in `PP_NARG` and `PP_EACH` assume the default limit, so a header generated with a lower `--limit` does not compile against them.
 - MSVC needs its conformant preprocessor (`/Zc:preprocessor`, VS 2019 16.5 or later), which `CMakeLists.txt` sets. MSVC support is optional and untested; only current versions matter. MSVC enforces the C standard minimum of 127 macro arguments; this is why the default limit is 63.
 
 ## Known inconsistencies
