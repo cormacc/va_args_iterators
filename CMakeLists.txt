@@ -13,7 +13,9 @@ add_library(Catch INTERFACE)
 target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 
 # Make test executable
-set(TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test/pp_iter_test.cpp)
+set(TEST_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/pp_iter_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/pp_enum_test.cpp)
 add_executable(tests ${TEST_SOURCES})
 target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(tests Catch)
