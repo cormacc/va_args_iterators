@@ -8,7 +8,7 @@
  * These macros are used to generate enums and associated tags without repetition, e.g.
  *
  * 1. Define the unique names in a new macro
- * #define MyEnumIds NAME_1, NAME_2, NAME_3
+ * #define MyEnumTags NAME_1, NAME_2, NAME_3
  *
  * 2. Create the enum (In the .h, typically)
  * TAGGED_ENUM(MyEnum);
@@ -20,14 +20,15 @@
  *
  * The defined enum / enum type will include a `<Name>_COUNT` member.
  * The header will declare the function ~char const * MyEnum_asCString(int)~
- * The source file will define an array of strings using the defined MyEnumIds and
+ * The source file will define an array of strings using the defined MyEnumTags and
  * the implementation of ~char const * MyEnum_asCString(int)~
  *
- * N.B. Tag generation uses VA_ARGS counting and iteration macros defined in "pp_iter.h"
- * See that file for a link to a generator script if higher limit is required.
- * That'll take precedence over this include, as they use the same guard definition -- i.e
+ * N.B. Tag generation uses PP_EACH from "pp_iter.h", so an enum can have at most as many
+ * members as that header's argument limit. See that file for a link to the generator script if a
+ * higher limit is required. A generated header included first takes precedence over this include,
+ * as they use the same guard definition -- i.e
  * #include "pp_iter512.h"
- * #include "enum.h"
+ * #include "pp_enum.h"
  */
 
 #ifndef Enum_H
@@ -54,7 +55,7 @@ extern "C" {
  *
  *      extern char const GLOBAL_ENUM_UNDEFINED_TAG[];
  *      #define ENUM_UNDEFINED_TAG GLOBAL_ENUM_UNDEFINED_TAG
- *      #include "enum.h"
+ *      #include "pp_enum.h"
  *
  * and in 'my_tagged_enum.c'
  *
