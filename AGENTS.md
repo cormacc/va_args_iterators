@@ -7,8 +7,9 @@ Header-only C preprocessor library to count and iterate over `__VA_ARGS__`. The 
 Run all commands in the Nix devShell (`flake.nix`: cmake, ruby, stdenv gcc). direnv loads it through `.envrc`; otherwise prefix a command with `nix develop -c`.
 
 ```sh
-# Build and run the unit tests (C++20, Catch2 v2.13.9 single header in vendor/catch)
-cmake -S . -B build && cmake --build build && ./build/tests
+# Build and run both test programs: tests (C++20, Catch2 v2.13.9 in vendor/catch) and c_tests (strict C99)
+cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure
+./build/tests                     # Catch2 report
 
 # Regenerate pp_iter.h (default limit 63 args); extra args pass through to the generator
 ./regenerate                      # = ruby pp_iterators.rb "$@" > pp_iter.h
@@ -37,7 +38,7 @@ Tasks are in `TASKS.org` (org-tasks protocol; use the `ot` CLI, e.g. `ot list`, 
 - The header requires `__VA_OPT__`; there are no compiler-specific code paths. `PP_NARG` is `PP_I_PLACEHOLDER __VA_OPT__(,) __VA_ARGS__` counted against `PP_RSEQ_N()`, and `PP_IS_EMPTY` is `PP_NOT(PP_NARG(...))`. `narg_common` defines the probe `PP_HAS_VA_OPT` and emits `#error` when it is 0; argument counting is emitted first so that this error comes first.
 - The minimum supported embedded compiler is Microchip XC-DSC v4.00 (GCC 8.3.1 based, C only). It supports `__VA_OPT__` in all C modes; strict `-std=c99`/`c11`/`c17` with `-pedantic` warns about it. The Nix devShell does not provide XC-DSC.
 - `pp_enum.h` is hand-written. It builds on `pp_iter.h` and provides `TAGGED_ENUM`, `TAGGED_ENUM_TYPE`, `ENUM_DESCRIBE` and `ENUM_DESCRIBE_EXPLICIT`, which generate `<Name>_COUNT` and `<Name>_asCString`. It reads the member list from a user macro named `<Name>Tags` (`PP_I_ENUM` uses `NAME##Tags`). Its internal macros follow the same `PP_I_` naming.
-- Tests: `test/pp_iter_test.cpp` (`SCENARIO` blocks for each `pp_iter.h` macro, and the Catch main) and `test/pp_enum_test.cpp`. The 63-argument tests in `PP_NARG` and `PP_EACH` assume the default limit, so a header generated with a lower `--limit` does not compile against them.
+- Tests: `test/pp_iter_test.cpp` (`SCENARIO` blocks for each `pp_iter.h` macro, and the Catch main) and `test/pp_enum_test.cpp` build `tests`; `test/pp_c_test.c` builds `c_tests` as C99 without extensions. `pp_c_test.c` checks values at compile time with `CHECK` (a negative array size) and at run time through its exit status. The 63-argument tests in `PP_NARG` and `PP_EACH` assume the default limit, so a header generated with a lower `--limit` does not compile against them.
 - MSVC needs its conformant preprocessor (`/Zc:preprocessor`, VS 2019 16.5 or later) for `__VA_OPT__`; `CMakeLists.txt` sets it. MSVC support is optional and untested; only current versions matter. MSVC enforces the C standard minimum of 127 macro arguments; this is why the default limit is 63.
 
 ## Earlier versions

@@ -259,11 +259,11 @@ This sacrifices the protection against re-arrangement of members. The tag array 
 
 
 * Unit tests
-The unit tests use [[https://github.com/catchorg/Catch2][Catch2]] v2.13.9 (vendored in =vendor/catch=):
-- [[./test/pp_iter_test.cpp]] :: =pp_iter.h= (argument counting, emptiness tests and the iteration macros).
-- [[./test/pp_enum_test.cpp]] :: =pp_enum.h=.
+There are two test programs:
+- =tests= :: C++20 tests that use [[https://github.com/catchorg/Catch2][Catch2]] v2.13.9 (vendored in =vendor/catch=). [[./test/pp_iter_test.cpp]] tests =pp_iter.h= (argument counting, emptiness tests and the iteration macros), and [[./test/pp_enum_test.cpp]] tests =pp_enum.h=.
+- =c_tests= :: [[./test/pp_c_test.c]], which checks both headers from C, compiled as strict C99.
 
-The Nix flake supplies a development shell with CMake, a C++ compiler and Ruby. Run the commands below inside =nix develop=, or enter the directory with direnv.
+The Nix flake supplies a development shell with CMake, a C and C++ compiler and Ruby. Run the commands below inside =nix develop=, or enter the directory with direnv.
 
 ** Building unit tests
 #+begin_src sh
@@ -273,10 +273,10 @@ The Nix flake supplies a development shell with CMake, a C++ compiler and Ruby. 
 
 ** Running unit tests
 #+begin_src sh
-  ./build/tests
+  ctest --test-dir build
 #+end_src
 
-All tests should pass (71 assertions in 9 test cases).
+Both tests should pass. Run =./build/tests= for the Catch2 report (71 assertions in 9 test cases).
 
 * References / prior art
 - I initially encountered the variadic macro counting logic in [[https://groups.google.com/forum/#!topic/comp.std.c/d-6Mj5Lko_s][this post]] by Laurent Deniau. His solution was refined by arpad. and zhangj to handle the no-argument case; =pp_iter.h= uses =__VA_OPT__= for that case instead.
