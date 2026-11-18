@@ -2,16 +2,11 @@
 
 # Generator logic for a family of macros for C metaprogramming
 #
-# See these blog posts in relation to VA_EACH:
+# The recursive iteration macros (PP_EACH etc.) are based on:
 # - http://saadahmad.ca/cc-preprocessor-metaprogramming-2/
-# - http://ptspts.blogspot.ie/2013/11/how-to-apply-macro-to-all-arguments-of.html
-# - https://codecraft.co/2014/11/25/variadic-macros-tricks/ (Similar, but recursive)
-# IS_EMPTY implementation adapted from here:
-# - https://gustedt.wordpress.com/2010/06/08/detect-empty-macro-arguments/
 
 require 'date'
 require 'optparse'
-require 'ostruct'
 
 class PPIterators
 
@@ -31,7 +26,7 @@ class PPIterators
       end
 
       def define_macro(m)
-        m.empty? ? m : "\#define #{m}\n"
+        "\#define #{m}\n"
       end
 
       def define_macros(macros)
@@ -46,13 +41,10 @@ class PPIterators
 
   # MSVC enforces the standard minimum requirement of 127 VA_ARGS
   MAX_ARG_COUNT_DEFAULT = 63
-  DEFER_LEVELS_DEFAULT = 6
 
-  attr_reader :nargs_max, :defer_levels
-  def initialize(nargs_max: MAX_ARG_COUNT_DEFAULT,
-                 defer_levels: DEFER_LEVELS_DEFAULT)
+  attr_reader :nargs_max
+  def initialize(nargs_max: MAX_ARG_COUNT_DEFAULT)
     @nargs_max = nargs_max
-    @defer_levels = defer_levels
   end
 
 
@@ -86,20 +78,14 @@ EOH
                         )
   end
 
-  def eval_set(suffix: '', prefix: '')
-    level_count = Math.log2(@nargs_max).ceil
-    eroot = "#{prefix}EVAL#{suffix}"
-    CFile::define_macro_set(eroot,
-                            [
-                              "#{eroot}(...) _#{eroot}_#{level_count}(__VA_ARGS__)",
-                              "_#{eroot}_1(...) __VA_ARGS__"
-                            ] + (2..level_count).map{ |l| "_#{eroot}_#{l}(...) _#{eroot}_#{l-1}(_#{eroot}_#{l-1}(__VA_ARGS__))"}
-                           )
-  end
-
-  #Support two levels of eval nesting
   def eval
-    [eval_set, eval_set(:suffix => '_')].join("\n")
+    level_count = Math.log2(@nargs_max).ceil
+    CFile::define_macro_set('EVAL',
+                            [
+                              "EVAL(...) _EVAL_#{level_count}(__VA_ARGS__)",
+                              "_EVAL_1(...) __VA_ARGS__"
+                            ] + (2..level_count).map{ |l| "_EVAL_#{l}(...) _EVAL_#{l-1}(_EVAL_#{l-1}(__VA_ARGS__))"}
+                           )
   end
 
   def defer
@@ -107,8 +93,8 @@ EOH
                             [
                               'PP_NOP()',
                               'DEFER(...) __VA_ARGS__ PP_NOP()',
-                              'DEFER2(...) __VA_ARGS__ DEFER(PP_NOP) ()',
-                            ] + (3..@defer_levels).map{ |l| "DEFER#{l}(...) __VA_ARGS__ DEFER#{l-1}(PP_NOP) ()"}
+                              'DEFER2(...) __VA_ARGS__ DEFER(PP_NOP) ()'
+                            ]
                            )
   end
 
@@ -160,25 +146,19 @@ EOH
 )
   end
 
-  def is_empty
-    CFile::define_macro("IS_EMPTY(...)  NOT(PP_NARG(__VA_ARGS__))")
-  end
-
   def lists
     CFile::include_guard('PP_LISTS', <<-EOH
 #define HEAD(FIRST, ...) FIRST
 #define TAIL(FIRST, ...) __VA_ARGS__
 
-#define TEST_LAST EXISTS(1)
 #define NOT_EMPTY(...) NOT(IS_EMPTY(__VA_ARGS__))
-#{is_empty}
+#define IS_EMPTY(...) NOT(PP_NARG(__VA_ARGS__))
 EOH
                         )
   end
 
   def tuples
     CFile::include_guard('PP_TUPLES', <<-EOH
-#define PAREN(...) ( __VA_ARGS__ )
 #define DEPAREN(...) DEPAREN_ __VA_ARGS__
 #define DEPAREN_(...) __VA_ARGS__
 
@@ -320,10 +300,6 @@ EOH
     CFile::include_guard("PP_PAR_EACH_IDX", pp_par_each_idx)
   end
 
-  def parameterised_each_with_index_n(n)
-    fargs = (1..n).map { |aidx| "P#{aidx}"}.join(", ")
-    CFile::define_macro("PP_#{n}PAR_EACH_IDX(TF, #{fargs}, ...) PP_PAR_EACH_IDX(TF, (#{fargs}), __VA_ARGS__)")
-  end
 
   def comma
     CFile::include_guard('PP_COMMA', pp_comma)
@@ -352,17 +328,11 @@ EOH
  *
  * I initially encountered the variadic macro counting logic in this post by Laurent Deniau:
  * https://groups.google.com/forum/#!topic/comp.std.c/d-6Mj5Lko_s
- * Refined by arpad. and zhangj to handle the no-argument case
+ * PP_NARG uses __VA_OPT__ to count zero arguments.
  *
- * The (preferred) recursive implementations of PP_EACH, PP_EACH_IDX and PP_PAR_EACH_IDX are based on an excellent series of posts by Saad Ahmad
+ * The recursive implementations of PP_EACH, PP_EACH_IDX, PP_PAR_EACH_IDX and PP_COMMA_EACH are based on an
+ * excellent series of posts by Saad Ahmad:
  * http://saadahmad.ca/cc-preprocessor-metaprogramming-2/
- *
- * The non- (or semi-) recursive PP_EACH implementation is based on this blog post by Daniel Hardman:
- * https://codecraft.co/2014/11/25/variadic-macros-tricks/
- *
- * The non-recursive PP_EACH_IDX and PP_PAR_EACH_IDX macro implementations extend the non-recursive PP_EACH implementation
- * described in this (anonymous) blog post:
- * http://ptspts.blogspot.ie/2013/11/how-to-apply-macro-to-all-arguments-of.html
  *
  * Requires a preprocessor with __VA_OPT__ support (standard in C++20 and C23; MSVC needs /Zc:preprocessor).
  */
@@ -415,10 +385,6 @@ EOH
 //PP_PAR_EACH_IDX
 #{parameterised_each_with_index}
 
-//PP_xPAR_EACH_IDX (Wrappers for deprecated macros)
-#{parameterised_each_with_index_n(1)}
-#{parameterised_each_with_index_n(2)}
-
 //PP_COMMA
 #{comma}
 
@@ -433,17 +399,14 @@ end
 # Generate a header if run standalone rather than required as a dependency
 if __FILE__==$0
 
-  #Default options
-  options = OpenStruct.new
-  options.nargs_max = PPIterators::MAX_ARG_COUNT_DEFAULT
+  nargs_max = PPIterators::MAX_ARG_COUNT_DEFAULT
 
   OptionParser.new do |opts|
     opts.banner = "Usage: pp_iterators.rb [options]"
     opts.on("--limit N", Integer, "Argument count limit (defaults to #{PPIterators::MAX_ARG_COUNT_DEFAULT})") do |n|
-      options.nargs_max=n
+      nargs_max = n
     end
   end.parse!
-  # ppi = ARGV.empty? ? PPIterators.new() : PPIterators.new(ARGV[0].to_i)
-  ppi = PPIterators.new(nargs_max: options.nargs_max)
+  ppi = PPIterators.new(nargs_max: nargs_max)
   puts ppi.generate_header
 end

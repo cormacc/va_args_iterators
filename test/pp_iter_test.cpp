@@ -237,7 +237,6 @@ SCENARIO("PP_EACH_IDX") {
 
 
 #define TFEQFIX(FIXED_ARG, ARG, ARG_IDX) REQUIRE(ARG == FIXED_ARG##ARG_IDX);
-// #define TFEQFIX(FIXED_ARG, ARG, ARG_IDX) REQUIRE(ARG == CAT(FIXED_ARG, ARG_IDX));
 SCENARIO("PP_PAR_EACH_IDX") {
   GIVEN("stringifying macro with 1 fixed argument") {
     WHEN("applied") {
@@ -250,7 +249,6 @@ SCENARIO("PP_PAR_EACH_IDX") {
   }
 
   GIVEN("stringifying macro with 2 fixed arguments") {
-// #define TFEQFIX(FIXED_ARG, ARG, ARG_IDX) REQUIRE(ARG == FIXED_ARG##ARG_IDX);
 #define TFEQ2FIX(FIXED_ARG1, FIXED_ARG2, ARG, ARG_IDX) REQUIRE(ARG == CAT(FIXED_ARG1, ARG_IDX));
     WHEN("applied") {
       test_struct tested = {.arg0 = 6, .arg1 = 5, .arg2 = 4};
@@ -282,16 +280,3 @@ SCENARIO("PP_PAR_EACH_IDX") {
     }
   }
 }
-
-// SCENARIO("PP_1PAR_EACH_IDX") {
-//   GIVEN("stringifying macro") {
-// #define TFEQFIX(FIXED_ARG, ARG, ARG_IDX) REQUIRE(ARG == FIXED_ARG##ARG_IDX);
-//     WHEN("applied") {
-//       test_struct tested = {.arg0 = 6, .arg1 = 5, .arg2 = 4};
-//       PP_1PAR_EACH_IDX(TFEQFIX, tested.arg, 6, 5, 4);
-//       THEN("arg index stringifies as expected") {
-
-//       }
-//     }
-//   }
-// }

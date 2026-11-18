@@ -64,7 +64,6 @@ extern "C" {
 #define ENUM_UNDEFINED_TAG "UNDEFINED"
 #endif
 
-#define _ENUM_MEMBER_(NAME) NAME,
 #define _ENUM_TAG_(NAME) #NAME,
 
 #define _ENUM_DESCRIPTOR_DECLARATION_(NAME)           \
