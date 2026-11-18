@@ -34,6 +34,13 @@
 #ifndef PP_ENUM_H
 #  define PP_ENUM_H
 
+// GCC and Clang: treat this as a system header. In strict modes (e.g. -std=c99 -pedantic), each
+// use of the macros otherwise warns about __VA_OPT__ and about variadic macros called with no
+// variadic arguments. Warnings from the arguments that you pass to the macros are still reported.
+#  if defined(__GNUC__)
+#    pragma GCC system_header
+#  endif
+
 // ----------------------------------------------------------------------------
 // Includes
 // ----------------------------------------------------------------------------

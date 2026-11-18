@@ -36,7 +36,7 @@ The C99 and C11 standard specifies that a compiler must handle a program with a 
 In my experience, MSVC appears to enforce the 127-argument limit, whereas gcc handled 512 without difficulties (didn't test any higher arg count).
 
 * Compiler compatibility
-=pp_iter.h= requires a preprocessor that supports =__VA_OPT__=, and stops with =#error= if it does not. =__VA_OPT__= is standard in C++20 and C23, and GCC also accepts it in older C and C++ modes (with a warning under =-pedantic= in strict modes such as =-std=c99=). The oldest compiler tested is Microchip XC-DSC v4.00 (based on GCC 8.3.1). MSVC needs its conformant preprocessor (=/Zc:preprocessor=, Visual Studio 2019 16.5 or later); it is not tested.
+=pp_iter.h= requires a preprocessor that supports =__VA_OPT__=, and stops with =#error= if it does not. =__VA_OPT__= is standard in C++20 and C23, and GCC also accepts it in older C and C++ modes. In strict modes such as =-std=c99 -pedantic=, GCC would warn about =__VA_OPT__= and about variadic macros called with no variadic arguments; both headers use =#pragma GCC system_header= to suppress these warnings, and warnings about the arguments that you pass to the macros are still reported. The oldest compiler tested is Microchip XC-DSC v4.00 (based on GCC 8.3.1). MSVC needs its conformant preprocessor (=/Zc:preprocessor=, Visual Studio 2019 16.5 or later); it is not tested.
 
 With =__VA_OPT__=, =PP_NARG()= evaluates to 0, and the iteration macros accept an empty argument list, in every language mode.
 
