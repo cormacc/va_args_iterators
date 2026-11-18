@@ -174,17 +174,32 @@ EOH
                         )
   end
 
-  def narg_common
-    CFile::define_macro_set('PP_UTIL_H',
-                            [
-                              "PP_SEQ_N() #{arg_seq(last: @nargs_max)}",
-                              "PP_RSEQ_N() #{arg_seq(last: @nargs_max, reverse: true)}",
-                              # PP_HAS_VA_OPT is 1 if __VA_OPT__(,) expands to a comma, which shifts the 1 into third place
-                              "PP_I_THIRD_ARG(a, b, c, ...) c",
-                              "PP_I_VA_OPT_PROBE(...) PP_I_THIRD_ARG(__VA_OPT__(,), 1, 0, )",
-                              "PP_HAS_VA_OPT PP_I_VA_OPT_PROBE(?)"
-                            ]
-                           ) + <<-EOH
+  # PP_HAS_VA_OPT is 1 if __VA_OPT__(,) expands to a comma, which shifts the 1 into third place
+  VA_OPT_PROBE_MACROS = [
+    "PP_I_THIRD_ARG(a, b, c, ...) c",
+    "PP_I_VA_OPT_PROBE(...) PP_I_THIRD_ARG(__VA_OPT__(,), 1, 0, )",
+    "PP_HAS_VA_OPT PP_I_VA_OPT_PROBE(?)"
+  ].freeze
+
+  # The __VA_OPT__ probe on its own, for a generator that embeds the macros in its own header.
+  # Emit it before an `#if PP_HAS_VA_OPT` block that holds embed_macros(require_va_opt: false).
+  # Predefine PP_HAS_VA_OPT (e.g. -DPP_HAS_VA_OPT=0) to override the probe.
+  def va_opt_probe
+    CFile::include_guard('PP_VA_OPT_PROBE_H',
+                         "#ifndef PP_HAS_VA_OPT\n" + CFile::indent(CFile::define_macros(VA_OPT_PROBE_MACROS)) + "#endif //PP_HAS_VA_OPT\n")
+  end
+
+  # Common definitions for the argument counting macros (narg, narg_minus).
+  # With require_va_opt (the default) they include the __VA_OPT__ probe and an #error when
+  # __VA_OPT__ is missing. Without it they include neither: see va_opt_probe.
+  def narg_common(require_va_opt: true)
+    sequences = [
+      "PP_SEQ_N() #{arg_seq(last: @nargs_max)}",
+      "PP_RSEQ_N() #{arg_seq(last: @nargs_max, reverse: true)}"
+    ]
+    return CFile::define_macro_set('PP_UTIL_H', sequences) unless require_va_opt
+
+    CFile::define_macro_set('PP_UTIL_H', sequences + VA_OPT_PROBE_MACROS) + <<-EOH
 #if !PP_HAS_VA_OPT
   #error "pp_iter.h requires a preprocessor with __VA_OPT__ support (for MSVC, use /Zc:preprocessor)"
 #endif
@@ -331,10 +346,14 @@ EOH
 EOH
   end
 
-  def embed_macros
+  # All the macros, without the header comment and include guard of pp_iter.h.
+  # require_va_opt: false leaves out the __VA_OPT__ probe and the #error, for a generator that
+  # embeds the macros in `#if PP_HAS_VA_OPT ... #endif` after va_opt_probe.
+  def embed_macros(require_va_opt: true)
+    counting_comment = require_va_opt ? '//Argument counting (first, so that a missing __VA_OPT__ is reported before anything else)' : '//Argument counting'
     <<-EOH
-//Argument counting (first, so that a missing __VA_OPT__ is reported before anything else)
-#{narg_common}
+#{counting_comment}
+#{narg_common(require_va_opt: require_va_opt)}
 #{narg}
 
 //Defer / evaluate macros

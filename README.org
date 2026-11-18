@@ -11,6 +11,7 @@
     - [[#pp_comma_eachtf-][PP_COMMA_EACH(TF, ...)]]
     - [[#removed-macros][Removed macros]]
   - [[#generator][Generator]]
+    - [[#embedding-the-macros-in-another-generators-header][Embedding the macros in another generator's header]]
 - [[#usage-example--auto-generation-of-string-descriptors-for-an-enum-type][Usage example :: auto-generation of string descriptors for an enum type]]
   - [[#my_tagged_enumh][my_tagged_enum.h]]
     - [[#untyped-enum][Untyped enum]]
@@ -139,6 +140,28 @@ The argument counting macros need the common definitions from =narg_common=:
 
 The iteration macros (=each=, =each_with_index=, =parameterised_each_with_index= and =list_each=) depend on most of the other definitions. To emit them, use =embed_macros= (the header body) or =generate_header= (the complete header).
 
+*** Embedding the macros in another generator's header
+These methods are the supported Ruby API for external generators:
+- =PPIterators.new(nargs_max: 63)= :: the argument limit; at least 2.
+- =embed_macros(require_va_opt: true)= :: all the macros, with their =PP_*_H= include guards. With =require_va_opt: false= the text has no =__VA_OPT__= probe and no =#error=, and it does not depend on the =#if= that you put around it.
+- =va_opt_probe= :: only the =__VA_OPT__= probe, which defines =PP_HAS_VA_OPT= as 1 or 0. It has its own include guard, and it does not define =PP_HAS_VA_OPT= if it is already defined, so that =-DPP_HAS_VA_OPT=0= forces the embedded macros off.
+- =narg_common(require_va_opt: true)= and =narg_minus(m)= :: the common counting definitions, and =PP_NARG_MINUS<m>=.
+
+To make =__VA_OPT__= a requirement for the embedded macros only, not for the whole host header, emit the probe and put the macros in =#if PP_HAS_VA_OPT=:
+
+#+BEGIN_SRC ruby
+  require './pp_iterators'
+  ppi = PPIterators.new(nargs_max: 63)
+  puts <<~EOH
+  #{ppi.va_opt_probe}
+  #if PP_HAS_VA_OPT
+  #{ppi.embed_macros(require_va_opt: false)}
+  #endif
+  EOH
+#+END_SRC
+
+Because the include guards are the same, a standalone =pp_iter.h= included after the host header skips the groups that the host header defines. The standalone =pp_iter.h= always uses its own probe: it ignores a predefined =PP_HAS_VA_OPT=, and stops with =#error= if =__VA_OPT__= is missing. [[./test/embed_host.rb]] generates such a host header for the =embed_tests= and =embed_tests_no_va_opt= tests.
+
 * Usage example :: auto-generation of string descriptors for an enum type
   The file [[file:pp_enum.h][pp_enum.h]] uses =PP_EACH= to support autogeneration of textual descriptions of enum members. This saves some repetition and eliminates the risk of forgetting to update the tag when adding/re-arranging members.
 
@@ -264,6 +287,7 @@ This sacrifices the protection against re-arrangement of members. The tag array 
 CTest runs these tests:
 - =tests= :: C++20 tests that use [[https://github.com/catchorg/Catch2][Catch2]] v2.13.9 (vendored in =vendor/catch=). [[./test/pp_iter_test.cpp]] tests =pp_iter.h= (argument counting, emptiness tests and the iteration macros), and [[./test/pp_enum_test.cpp]] tests =pp_enum.h=.
 - =c_tests= :: [[./test/pp_c_test.c]], which checks both headers from C, compiled as strict C99.
+- =embed_tests= and =embed_tests_no_va_opt= :: check the embedding mode (see [[#embedding-the-macros-in-another-generators-header][Embedding the macros in another generator's header]]), with =__VA_OPT__= and with =PP_HAS_VA_OPT= forced to 0. Like =header_up_to_date=, CMake adds them only if it finds Ruby.
 - =header_up_to_date= :: checks that =pp_iter.h= is the output of =pp_iterators.rb=, so that a change to the generator is not committed without the regenerated header. CMake adds this test only if it finds Ruby.
 
 The Nix flake supplies a development shell with CMake, GCC, Clang and Ruby. Run the commands below inside =nix develop=, or enter the directory with direnv.
