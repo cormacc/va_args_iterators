@@ -1,0 +1,26 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "gcc",
+      "displayName": "GCC",
+      "binaryDir": "${sourceDir}/build/gcc",
+      "cacheVariables": { "CMAKE_C_COMPILER": "gcc", "CMAKE_CXX_COMPILER": "g++" }
+    },
+    {
+      "name": "clang",
+      "displayName": "Clang",
+      "binaryDir": "${sourceDir}/build/clang",
+      "cacheVariables": { "CMAKE_C_COMPILER": "clang", "CMAKE_CXX_COMPILER": "clang++" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "gcc", "configurePreset": "gcc" },
+    { "name": "clang", "configurePreset": "clang" }
+  ],
+  "testPresets": [
+    { "name": "gcc", "configurePreset": "gcc", "output": { "outputOnFailure": true } },
+    { "name": "clang", "configurePreset": "clang", "output": { "outputOnFailure": true } }
+  ]
+}

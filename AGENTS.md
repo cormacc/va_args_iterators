@@ -4,12 +4,14 @@ Header-only C preprocessor library to count and iterate over `__VA_ARGS__`. The 
 
 ## Commands
 
-Run all commands in the Nix devShell (`flake.nix`: cmake, ruby, stdenv gcc). direnv loads it through `.envrc`; otherwise prefix a command with `nix develop -c`.
+Run all commands in the Nix devShell (`flake.nix`: cmake, ruby, stdenv gcc, and `clang`/`clang++` only, so that `cc`/`c++` stay GCC). direnv loads it through `.envrc`; otherwise prefix a command with `nix develop -c`.
 
 ```sh
-# Build and run both test programs: tests (C++20, Catch2 v2.13.9 in vendor/catch) and c_tests (strict C99)
-cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure
-./build/tests                     # Catch2 report
+# Build and run the tests with each compiler (CMakePresets.json: gcc, clang; build/<preset>)
+# CTest runs tests (C++20, Catch2 v2.13.9 in vendor/catch), c_tests (strict C99) and header_up_to_date
+for p in gcc clang; do cmake --preset $p && cmake --build --preset $p && ctest --preset $p; done
+./build/gcc/tests                 # Catch2 report
+cmake --list-presets              # available presets
 
 # Regenerate pp_iter.h (default limit 63 args); extra args pass through to the generator
 ./regenerate                      # = ruby pp_iterators.rb "$@" > pp_iter.h
@@ -20,7 +22,7 @@ ruby pp_iterators.rb --limit 127 > pp_iter.h
 ./inspect_macro_expansion         # = gcc -I . -I ./vendor/catch -E test/pp_iter_test.cpp
 ```
 
-`CMakeLists.txt` declares `cmake_minimum_required(VERSION 3.12...4.4)`: 3.12 is the minimum for `CXX_STANDARD 20`, and 4.4 is the newest version tested. Raise the upper bound when you test a newer CMake. The expected result is `All tests passed (71 assertions in 9 test cases)`.
+`CMakeLists.txt` declares `cmake_minimum_required(VERSION 3.21...4.4)`: 3.21 is the first version that reads `CMakePresets.json` version 3, which does not need a `generator`, and 4.4 is the newest version tested. Raise the upper bound when you test a newer CMake. The expected result is `All tests passed (71 assertions in 9 test cases)`.
 
 Generation is deterministic. The CTest test `header_up_to_date` (`test/check_header.cmake`, added when CMake finds Ruby) fails if `pp_iter.h` differs from the generator output.
 

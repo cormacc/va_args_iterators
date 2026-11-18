@@ -264,20 +264,22 @@ CTest runs these tests:
 - =c_tests= :: [[./test/pp_c_test.c]], which checks both headers from C, compiled as strict C99.
 - =header_up_to_date= :: checks that =pp_iter.h= is the output of =pp_iterators.rb=, so that a change to the generator is not committed without the regenerated header. CMake adds this test only if it finds Ruby.
 
-The Nix flake supplies a development shell with CMake, a C and C++ compiler and Ruby. Run the commands below inside =nix develop=, or enter the directory with direnv.
+The Nix flake supplies a development shell with CMake, GCC, Clang and Ruby. Run the commands below inside =nix develop=, or enter the directory with direnv.
+
+=CMakePresets.json= has a preset for each compiler: =gcc= and =clang=. Each preset builds in =build/<preset>=. The presets need CMake 3.21 or later.
 
 ** Building unit tests
 #+begin_src sh
-  cmake -S . -B build
-  cmake --build build
+  cmake --preset gcc
+  cmake --build --preset gcc
 #+end_src
 
 ** Running unit tests
 #+begin_src sh
-  ctest --test-dir build
+  ctest --preset gcc
 #+end_src
 
-All tests should pass. Run =./build/tests= for the Catch2 report (71 assertions in 9 test cases).
+All tests should pass. Run =./build/gcc/tests= for the Catch2 report (71 assertions in 9 test cases). Replace =gcc= with =clang= to build and test with Clang.
 
 * References / prior art
 - I initially encountered the variadic macro counting logic in [[https://groups.google.com/forum/#!topic/comp.std.c/d-6Mj5Lko_s][this post]] by Laurent Deniau. His solution was refined by arpad. and zhangj to handle the no-argument case; =pp_iter.h= uses =__VA_OPT__= for that case instead.

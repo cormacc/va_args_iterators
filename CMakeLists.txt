@@ -1,6 +1,6 @@
-# <min>...<max>: 3.12 is the first release that knows CXX_STANDARD 20;
+# <min>...<max>: 3.21 is the first release with CMakePresets.json version 3 (no generator needed);
 # policies follow the newest release tested (4.4), or the running CMake if older.
-cmake_minimum_required(VERSION 3.12...4.4)
+cmake_minimum_required(VERSION 3.21...4.4)
 
 project(va_args_iterators LANGUAGES C CXX)
 

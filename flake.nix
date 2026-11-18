@@ -8,13 +8,21 @@
 
   outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
-      let pkgs = import nixpkgs { inherit system; };
+      let
+        pkgs = import nixpkgs { inherit system; };
+        # Only clang and clang++: the full clang wrapper also provides cc and c++, which would
+        # replace GCC's on PATH.
+        clangOnly = pkgs.runCommand "clang-only" { } ''
+          mkdir -p $out/bin
+          ln -s ${pkgs.clang}/bin/clang ${pkgs.clang}/bin/clang++ $out/bin/
+        '';
       in {
-        # mkShell (not mkShellNoCC): stdenv supplies the C/C++ compiler for the Catch tests.
+        # mkShell (not mkShellNoCC): stdenv supplies GCC, the default compiler (CC=gcc, CXX=g++).
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             cmake
             ruby # pp_iterators.rb header generator
+            clangOnly # second compiler, for the clang CMake presets
           ];
         };
       });
