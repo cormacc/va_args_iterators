@@ -34,10 +34,6 @@
 #ifndef Enum_H
 #  define Enum_H
 
-#  ifdef  __cplusplus
-extern "C" {
-#  endif
-
 // ----------------------------------------------------------------------------
 // Includes
 // ----------------------------------------------------------------------------
@@ -105,10 +101,5 @@ extern "C" {
 #define ENUM_DESCRIBE_EXPLICIT(NAME, ...)    \
   ENUM_TAGS_EXPLICIT(NAME, __VA_ARGS__);     \
   _ENUM_DESCRIPTOR_DEFINITION_(NAME)
-
-
-#  ifdef  __cplusplus
-}
-#  endif
 
 #endif  /* Enum_H */
