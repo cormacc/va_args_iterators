@@ -39,6 +39,7 @@ SCENARIO("TAGGED_ENUM with ENUM_DESCRIBE") {
 
     THEN("an out-of-range id gives ENUM_UNDEFINED_TAG") {
       REQUIRE(strcmp(Piper_asCString(Piper_COUNT), ENUM_UNDEFINED_TAG) == 0);
+      REQUIRE(strcmp(Piper_asCString(-1), ENUM_UNDEFINED_TAG) == 0);
     }
   }
 }

@@ -71,7 +71,7 @@ extern "C" {
   char const * NAME##_asCString(int id)
 
 #define _ENUM_DESCRIPTOR_DEFINITION_(NAME)                                    \
-  _ENUM_DESCRIPTOR_DECLARATION_(NAME) { return id < NAME##_COUNT ? NAME##_TAGS[id] : ENUM_UNDEFINED_TAG; }
+  _ENUM_DESCRIPTOR_DECLARATION_(NAME) { return (unsigned)id < (unsigned)NAME##_COUNT ? NAME##_TAGS[id] : ENUM_UNDEFINED_TAG; }
 
 #define ENUM(NAME) enum NAME { NAME##Tags , NAME##_COUNT }
 #define ENUM_TYPE(NAME) typedef enum { NAME##Tags , NAME##_COUNT } NAME;

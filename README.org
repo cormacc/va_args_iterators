@@ -274,7 +274,7 @@ The Nix flake supplies a development shell with CMake, a C++ compiler and Ruby. 
   ./build/tests
 #+end_src
 
-All tests should pass (70 assertions in 9 test cases).
+All tests should pass (71 assertions in 9 test cases).
 
 * References / prior art
 - I initially encountered the variadic macro counting logic in [[https://groups.google.com/forum/#!topic/comp.std.c/d-6Mj5Lko_s][this post]] by Laurent Deniau. His solution was refined by arpad. and zhangj to handle the no-argument case; =pp_iter.h= uses =__VA_OPT__= for that case instead.
