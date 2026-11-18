@@ -19,9 +19,7 @@ class PPIterators
       end
 
       def include_guard(name, content)
-        content.prepend("#define #{name}\n") unless content =~ /#define #{name}/
-
-        "#ifndef #{name}\n" + indent(content) + "#endif //#{name}\n"
+        "#ifndef #{name}\n" + indent("#define #{name}\n" + content) + "#endif //#{name}\n"
       end
 
       def define_macro(m)
@@ -42,7 +40,7 @@ class PPIterators
   MAX_ARG_COUNT_DEFAULT = 63
 
   attr_reader :nargs_max
-  # EVAL needs at least one expansion level, which ceil(log2(nargs_max)) gives only from 2
+  # PP_EVAL needs at least one expansion level, which ceil(log2(nargs_max)) gives only from 2
   def initialize(nargs_max: MAX_ARG_COUNT_DEFAULT)
     raise ArgumentError, "nargs_max must be an integer of at least 2 (got #{nargs_max.inspect})" unless nargs_max.is_a?(Integer) && nargs_max >= 2
     @nargs_max = nargs_max
@@ -60,19 +58,19 @@ class PPIterators
   # As the list empty macros will break down otherwise
   # See saadahmad's posts for further info
   def concat
-    CFile::include_guard('PP_CAT', <<-EOH
-// Defer the call to the CAT so that we get the updated parameters first
-#define CAT(a, b) _CAT_EVAL ( _CAT_EXPAND_PARAMETERS(a, b) )
-#define _CAT_EVAL(...) _CAT_HELPER __VA_ARGS__
+    CFile::include_guard('PP_CAT_H', <<-EOH
+// Defer the call to the PP_CAT so that we get the updated parameters first
+#define PP_CAT(a, b) PP_I_CAT_EVAL ( PP_I_CAT_EXPAND_PARAMETERS(a, b) )
+#define PP_I_CAT_EVAL(...) PP_I_CAT_HELPER __VA_ARGS__
 
 // Find the result of testing whether a macro is enclosed or not
-#define _CAT_EXPAND_PARAMETERS(a, b) (a, _CAT_PAREN_CHECK b, DEFAULT, b )
-#define _CAT_PAREN_CHECK(...) EXPANDED, ENCLOSED, (__VA_ARGS__) ) EAT (
+#define PP_I_CAT_EXPAND_PARAMETERS(a, b) (a, PP_I_CAT_PAREN_CHECK b, PP_I_DEFAULT, b )
+#define PP_I_CAT_PAREN_CHECK(...) PP_I_EXPANDED, PP_I_ENCLOSED, (__VA_ARGS__) ) PP_EAT (
 
 // Pattern match the result of testing if it is enclose or not
-#define _CAT_HELPER(a, _, f, b) _CAT_HELPER_ ## f (a, b)
-#define _CAT_HELPER_ENCLOSED(a, b) a b
-#define _CAT_HELPER_DEFAULT(a, b) a ## b
+#define PP_I_CAT_HELPER(a, _, f, b) PP_I_CAT_HELPER_ ## f (a, b)
+#define PP_I_CAT_HELPER_PP_I_ENCLOSED(a, b) a b
+#define PP_I_CAT_HELPER_PP_I_DEFAULT(a, b) a ## b
 
 EOH
                         )
@@ -80,111 +78,111 @@ EOH
 
   def eval
     level_count = Math.log2(@nargs_max).ceil
-    CFile::define_macro_set('EVAL',
+    CFile::define_macro_set('PP_EVAL_H',
                             [
-                              "EVAL(...) _EVAL_#{level_count}(__VA_ARGS__)",
-                              "_EVAL_1(...) __VA_ARGS__"
-                            ] + (2..level_count).map{ |l| "_EVAL_#{l}(...) _EVAL_#{l-1}(_EVAL_#{l-1}(__VA_ARGS__))"}
+                              "PP_EVAL(...) PP_I_EVAL_#{level_count}(__VA_ARGS__)",
+                              "PP_I_EVAL_1(...) __VA_ARGS__"
+                            ] + (2..level_count).map{ |l| "PP_I_EVAL_#{l}(...) PP_I_EVAL_#{l-1}(PP_I_EVAL_#{l-1}(__VA_ARGS__))"}
                            )
   end
 
   def defer
-    CFile::define_macro_set('DEFER',
+    CFile::define_macro_set('PP_DEFER_H',
                             [
                               'PP_NOP()',
-                              'DEFER(...) __VA_ARGS__ PP_NOP()',
-                              'DEFER2(...) __VA_ARGS__ DEFER(PP_NOP) ()'
+                              'PP_DEFER(...) __VA_ARGS__ PP_NOP()',
+                              'PP_DEFER2(...) __VA_ARGS__ PP_DEFER(PP_NOP) ()'
                             ]
                            )
   end
 
   # See http://saadahmad.ca/cc-preprocessor-metaprogramming-basic-pattern-matching-macros-and-conditionals/
   def logical
-    CFile::include_guard('PP_LOGIC', <<-EOH
-//Usage: IF(<condition>) (<then>, <else>)
-#define  IF(value) CAT(_IF_, value)
-#define _IF_1(true, ...) true
-#define _IF_0(true, ...) __VA_ARGS__
+    CFile::include_guard('PP_LOGIC_H', <<-EOH
+//Usage: PP_IF(<condition>) (<then>, <else>)
+#define  PP_IF(value) PP_CAT(PP_I_IF_, value)
+#define PP_I_IF_1(true, ...) true
+#define PP_I_IF_0(true, ...) __VA_ARGS__
 
-#define NOT(x) PP_MATCHER ( CAT(NOT_, x), 0 )
-#define NOT_0 EXISTS(1)
+#define PP_NOT(x) PP_MATCHER ( PP_CAT(PP_I_NOT_, x), 0 )
+#define PP_I_NOT_0 PP_I_EXISTS(1)
 
 //== Building blocks
 
 //PP_MATCHER
 #define PP_MATCHER(value, ...) \
-  IF ( _MATCH(_MATCH_FIND(value)) )\
-       ( _MATCH_EXTRACT(value), __VA_ARGS__ )
+  PP_IF ( PP_I_MATCH(PP_I_MATCH_FIND(value)) )\
+       ( PP_I_MATCH_EXTRACT(value), __VA_ARGS__ )
 
-#define _MATCH(x) CAT(__MATCH_, x)
-#define __MATCH_EXISTS(...) 1
-#define __MATCH_UNMATCHED 0
+#define PP_I_MATCH(x) PP_CAT(PP_I_MATCH_, x)
+#define PP_I_MATCH_PP_I_EXISTS(...) 1
+#define PP_I_MATCH_PP_I_UNMATCHED 0
 
-#define _MATCH_FIND(x) __MATCH_RESULT_EXTRACT (  __MATCH_RESULT_FIND(x) )
+#define PP_I_MATCH_FIND(x) PP_I_MATCH_RESULT_EXTRACT (  PP_I_MATCH_RESULT_FIND(x) )
 
 /**
  * Extract 2nd element of a match result in the format:
- * (IGNORED, EXISTS(DEFINED_VALUE)) or (IGNORED, UNMATCHED)
- * This is appended to __MATCH_ to convert result to a boolean,
+ * (IGNORED, PP_I_EXISTS(DEFINED_VALUE)) or (IGNORED, PP_I_UNMATCHED)
+ * This is appended to PP_I_MATCH_ to convert result to a boolean,
  */
-#define __MATCH_RESULT_EXTRACT(x) __MATCH_RESULT_EXTRACT_HELPER  x
-#define __MATCH_RESULT_EXTRACT_HELPER(match, return_value) return_value
+#define PP_I_MATCH_RESULT_EXTRACT(x) PP_I_MATCH_RESULT_EXTRACT_HELPER  x
+#define PP_I_MATCH_RESULT_EXTRACT_HELPER(match, return_value) return_value
 
 /**
- * __MATCH_RESULT_FIND( EXISTS(bla) ) returns ( EXPANDED, EXISTS(bla) )
- * __MATCH_RESULT_FIND( bla ) returns ( TEST_bla, UNMATCHED)
+ * PP_I_MATCH_RESULT_FIND( PP_I_EXISTS(bla) ) returns ( PP_I_EXPANDED, PP_I_EXISTS(bla) )
+ * PP_I_MATCH_RESULT_FIND( bla ) returns ( TEST_bla, PP_I_UNMATCHED)
  */
-#define __MATCH_RESULT_FIND(x) ( CAT(__MATCH_RESULT_EXPAND_, x),  UNMATCHED )
-#define __MATCH_RESULT_EXPAND_EXISTS(...) EXPANDED, EXISTS(__VA_ARGS__) ) EAT (
-#define EAT(...)
+#define PP_I_MATCH_RESULT_FIND(x) ( PP_CAT(PP_I_MATCH_RESULT_EXPAND_, x),  PP_I_UNMATCHED )
+#define PP_I_MATCH_RESULT_EXPAND_PP_I_EXISTS(...) PP_I_EXPANDED, PP_I_EXISTS(__VA_ARGS__) ) PP_EAT (
+#define PP_EAT(...)
 
-//_MATCH_EXTRACT / __MATCH_EXTRACT_EXISTS
-#define _MATCH_EXTRACT(value) CAT(__MATCH_EXTRACT_, value)
-#define __MATCH_EXTRACT_EXISTS(...) __VA_ARGS__
+//PP_I_MATCH_EXTRACT / PP_I_MATCH_EXTRACT_PP_I_EXISTS
+#define PP_I_MATCH_EXTRACT(value) PP_CAT(PP_I_MATCH_EXTRACT_, value)
+#define PP_I_MATCH_EXTRACT_PP_I_EXISTS(...) __VA_ARGS__
 
 EOH
 )
   end
 
   def lists
-    CFile::include_guard('PP_LISTS', <<-EOH
-#define HEAD(FIRST, ...) FIRST
-#define TAIL(FIRST, ...) __VA_ARGS__
+    CFile::include_guard('PP_LISTS_H', <<-EOH
+#define PP_HEAD(FIRST, ...) FIRST
+#define PP_TAIL(FIRST, ...) __VA_ARGS__
 
-#define NOT_EMPTY(...) NOT(IS_EMPTY(__VA_ARGS__))
-#define IS_EMPTY(...) NOT(PP_NARG(__VA_ARGS__))
+#define PP_NOT_EMPTY(...) PP_NOT(PP_IS_EMPTY(__VA_ARGS__))
+#define PP_IS_EMPTY(...) PP_NOT(PP_NARG(__VA_ARGS__))
 EOH
                         )
   end
 
   def tuples
-    CFile::include_guard('PP_TUPLES', <<-EOH
-#define DEPAREN(...) DEPAREN_ __VA_ARGS__
-#define DEPAREN_(...) __VA_ARGS__
+    CFile::include_guard('PP_TUPLES_H', <<-EOH
+#define PP_DEPAREN(...) PP_I_DEPAREN __VA_ARGS__
+#define PP_I_DEPAREN(...) __VA_ARGS__
 
-#define IS_ENCLOSED(x, ...) PP_MATCHER ( IS_ENCLOSED_TEST x, 0 )
-#define IS_ENCLOSED_TEST(...) EXISTS(1)
+#define PP_IS_ENCLOSED(x, ...) PP_MATCHER ( PP_I_IS_ENCLOSED_TEST x, 0 )
+#define PP_I_IS_ENCLOSED_TEST(...) PP_I_EXISTS(1)
 
-#define IF_ENCLOSED(...) CAT(_IF_ENCLOSED_, IS_ENCLOSED(__VA_ARGS__))
-#define _IF_ENCLOSED_0(true, ...) __VA_ARGS__
-#define _IF_ENCLOSED_1(true, ...) true
+#define PP_IF_ENCLOSED(...) PP_CAT(PP_I_IF_ENCLOSED_, PP_IS_ENCLOSED(__VA_ARGS__))
+#define PP_I_IF_ENCLOSED_0(true, ...) __VA_ARGS__
+#define PP_I_IF_ENCLOSED_1(true, ...) true
 // This function will optionally remove parentheses around its arguments
 // if there are any. Otherwise it will return normally
-#define OPT_DEPAREN(...) \
-  IF_ENCLOSED (__VA_ARGS__) ( DEPAREN(__VA_ARGS__), __VA_ARGS__ )
+#define PP_OPT_DEPAREN(...) \
+  PP_IF_ENCLOSED (__VA_ARGS__) ( PP_DEPAREN(__VA_ARGS__), __VA_ARGS__ )
 EOH
                         )
   end
 
   def narg_common
-    CFile::define_macro_set('PP_UTIL',
+    CFile::define_macro_set('PP_UTIL_H',
                             [
                               "PP_SEQ_N() #{arg_seq(last: @nargs_max)}",
                               "PP_RSEQ_N() #{arg_seq(last: @nargs_max, reverse: true)}",
                               # PP_HAS_VA_OPT is 1 if __VA_OPT__(,) expands to a comma, which shifts the 1 into third place
-                              "_PP_THIRD_ARG(a, b, c, ...) c",
-                              "_PP_VA_OPT_PROBE(...) _PP_THIRD_ARG(__VA_OPT__(,), 1, 0, )",
-                              "PP_HAS_VA_OPT _PP_VA_OPT_PROBE(?)"
+                              "PP_I_THIRD_ARG(a, b, c, ...) c",
+                              "PP_I_VA_OPT_PROBE(...) PP_I_THIRD_ARG(__VA_OPT__(,), 1, 0, )",
+                              "PP_HAS_VA_OPT PP_I_VA_OPT_PROBE(?)"
                             ]
                            ) + <<-EOH
 #if !PP_HAS_VA_OPT
@@ -193,102 +191,102 @@ EOH
 EOH
   end
 
-  # The leading _0 placeholder in PP_NARG needs one more slot than nargs_max
+  # The leading PP_I_PLACEHOLDER in PP_NARG needs one more slot than nargs_max
   def arg_n_seq(delta)
-    seq = arg_seq(first: 1, last: @nargs_max+1, prefix: '_')
-    delta==0 ? seq :[arg_seq(first: 0, last: delta-1, prefix: '__', reverse: true), seq].join(', ')
+    seq = arg_seq(first: 1, last: @nargs_max+1, prefix: 'a')
+    delta==0 ? seq :[arg_seq(first: 0, last: delta-1, prefix: 'm', reverse: true), seq].join(', ')
   end
 
   def narg
     narg_minus(0)
   end
 
-  # The leading _0 placeholder lets the argument list be empty;
+  # The leading PP_I_PLACEHOLDER lets the argument list be empty;
   # __VA_OPT__(,) emits the comma after it only when there are arguments.
-  # PP_ARG_N is an indirection so that PP_RSEQ_N() expands before _PP_ARG_N counts its arguments.
+  # PP_ARG_N is an indirection so that PP_RSEQ_N() expands before PP_I_ARG_N counts its arguments.
   def narg_minus(m)
     suffix = m>0 ? "_MINUS#{m}" : ''
-    CFile::define_macro_set("PP_NARG#{suffix}",
+    CFile::define_macro_set("PP_NARG#{suffix}_H",
                             [
-                              "PP_ARG#{suffix}_N(...) _PP_ARG#{suffix}_N(__VA_ARGS__)",
-                              "PP_NARG#{suffix}(...) PP_ARG#{suffix}_N(_0 __VA_OPT__(,) __VA_ARGS__, PP_RSEQ_N())",
-                              "_PP_ARG#{suffix}_N(#{arg_n_seq(m)}, N, ...) N"
+                              "PP_ARG#{suffix}_N(...) PP_I_ARG#{suffix}_N(__VA_ARGS__)",
+                              "PP_NARG#{suffix}(...) PP_ARG#{suffix}_N(PP_I_PLACEHOLDER __VA_OPT__(,) __VA_ARGS__, PP_RSEQ_N())",
+                              "PP_I_ARG#{suffix}_N(#{arg_n_seq(m)}, N, ...) N"
                             ]
                            )
   end
 
   def each
-    CFile::include_guard('PP_EACH', <<-'EOH'
+    CFile::include_guard('PP_EACH_H', <<-'EOH'
 #define PP_EACH(TF, ...) \
-  EVAL(_PP_EACH_DEFER(TF, __VA_ARGS__))
+  PP_EVAL(PP_I_EACH_DEFER(TF, __VA_ARGS__))
 
-#define _PP_EACH_DEFER(TF, ...) \
-  IF ( NOT_EMPTY( __VA_ARGS__ )  ) \
+#define PP_I_EACH_DEFER(TF, ...) \
+  PP_IF ( PP_NOT_EMPTY( __VA_ARGS__ )  ) \
   ( \
-    DEFER(TF) (OPT_DEPAREN(HEAD(__VA_ARGS__))) \
-    DEFER2 ( __PP_EACH_DEFER ) () (TF, TAIL(__VA_ARGS__)) \
+    PP_DEFER(TF) (PP_OPT_DEPAREN(PP_HEAD(__VA_ARGS__))) \
+    PP_DEFER2 ( PP_I_EACH_INDIRECT ) () (TF, PP_TAIL(__VA_ARGS__)) \
   )
 
-//This indirection along with the DEFER2 and EVAL macros allows the recursive implementation of _PP_EACH_DEFER
-#define __PP_EACH_DEFER() _PP_EACH_DEFER
+//This indirection along with the PP_DEFER2 and PP_EVAL macros allows the recursive implementation of PP_I_EACH_DEFER
+#define PP_I_EACH_INDIRECT() PP_I_EACH_DEFER
 EOH
            )
   end
 
   def comma
-    CFile::include_guard('PP_COMMA', <<-'EOH'
+    CFile::include_guard('PP_COMMA_H', <<-'EOH'
 #define PP_COMMA() ,
 EOH
            )
   end
 
   def list_each
-    CFile::include_guard('PP_COMMA_EACH', <<-'EOH'
+    CFile::include_guard('PP_COMMA_EACH_H', <<-'EOH'
 #define PP_COMMA_EACH(TF, ...) \
-  EVAL(_PP_COMMA_EACH_DEFER(TF, __VA_ARGS__))
+  PP_EVAL(PP_I_COMMA_EACH_DEFER(TF, __VA_ARGS__))
 
-#define _PP_COMMA_EACH_DEFER(TF, ...) \
-  IF ( NOT_EMPTY( __VA_ARGS__ )  ) \
+#define PP_I_COMMA_EACH_DEFER(TF, ...) \
+  PP_IF ( PP_NOT_EMPTY( __VA_ARGS__ )  ) \
   ( \
-    DEFER(TF) (OPT_DEPAREN(HEAD(__VA_ARGS__))) \
-    IF ( NOT_EMPTY(TAIL(__VA_ARGS__))) (PP_COMMA()) \
-    DEFER2 ( __PP_COMMA_EACH_DEFER ) () (TF, TAIL(__VA_ARGS__)) \
+    PP_DEFER(TF) (PP_OPT_DEPAREN(PP_HEAD(__VA_ARGS__))) \
+    PP_IF ( PP_NOT_EMPTY(PP_TAIL(__VA_ARGS__))) (PP_COMMA()) \
+    PP_DEFER2 ( PP_I_COMMA_EACH_INDIRECT ) () (TF, PP_TAIL(__VA_ARGS__)) \
   )
 
-//This indirection along with the DEFER2 and EVAL macros allows the recursive implementation of _PP_COMMA_EACH_DEFER
-#define __PP_COMMA_EACH_DEFER() _PP_COMMA_EACH_DEFER
+//This indirection along with the PP_DEFER2 and PP_EVAL macros allows the recursive implementation of PP_I_COMMA_EACH_DEFER
+#define PP_I_COMMA_EACH_INDIRECT() PP_I_COMMA_EACH_DEFER
 EOH
            )
   end
 
   def each_with_index
-    CFile::include_guard('PP_EACH_IDX', <<-'EOH'
-#define PP_EACH_IDX(TF, ...) EVAL(_PP_EACH_IDX_DEFER(TF, (PP_SEQ_N()), __VA_ARGS__))
+    CFile::include_guard('PP_EACH_IDX_H', <<-'EOH'
+#define PP_EACH_IDX(TF, ...) PP_EVAL(PP_I_EACH_IDX_DEFER(TF, (PP_SEQ_N()), __VA_ARGS__))
 
-#define _PP_EACH_IDX_DEFER(TF, VA_INDICES, ...) \
-    IF ( NOT_EMPTY( __VA_ARGS__ )  ) \
+#define PP_I_EACH_IDX_DEFER(TF, VA_INDICES, ...) \
+    PP_IF ( PP_NOT_EMPTY( __VA_ARGS__ )  ) \
     ( \
-      DEFER2(TF) (OPT_DEPAREN(HEAD(__VA_ARGS__)), DEFER(HEAD)(DEPAREN(VA_INDICES))) \
-      DEFER2 ( __PP_EACH_IDX_DEFER ) () (TF, (TAIL VA_INDICES), TAIL(__VA_ARGS__)) \
+      PP_DEFER2(TF) (PP_OPT_DEPAREN(PP_HEAD(__VA_ARGS__)), PP_DEFER(PP_HEAD)(PP_DEPAREN(VA_INDICES))) \
+      PP_DEFER2 ( PP_I_EACH_IDX_INDIRECT ) () (TF, (PP_TAIL VA_INDICES), PP_TAIL(__VA_ARGS__)) \
     )
 
-  #define __PP_EACH_IDX_DEFER() _PP_EACH_IDX_DEFER
+  #define PP_I_EACH_IDX_INDIRECT() PP_I_EACH_IDX_DEFER
 EOH
            )
   end
 
   def parameterised_each_with_index
-    CFile::include_guard('PP_PAR_EACH_IDX', <<-'EOH'
-#define PP_PAR_EACH_IDX(TF, FARGS, ...) EVAL(_PP_PAR_EACH_IDX_DEFER(TF, FARGS, (PP_SEQ_N()), __VA_ARGS__))
+    CFile::include_guard('PP_PAR_EACH_IDX_H', <<-'EOH'
+#define PP_PAR_EACH_IDX(TF, FARGS, ...) PP_EVAL(PP_I_PAR_EACH_IDX_DEFER(TF, FARGS, (PP_SEQ_N()), __VA_ARGS__))
 
-#define _PP_PAR_EACH_IDX_DEFER(TF, FARGS, VA_INDICES, ...)                         \
-  IF ( NOT_EMPTY( __VA_ARGS__ )  )                                      \
+#define PP_I_PAR_EACH_IDX_DEFER(TF, FARGS, VA_INDICES, ...)                         \
+  PP_IF ( PP_NOT_EMPTY( __VA_ARGS__ )  )                                      \
   (                                                                     \
-    DEFER2(TF) (OPT_DEPAREN(FARGS), OPT_DEPAREN(HEAD(__VA_ARGS__)), DEFER(HEAD)(DEPAREN(VA_INDICES))) \
-    DEFER2 ( __PP_PAR_EACH_IDX_DEFER ) () (TF, FARGS, (TAIL VA_INDICES), TAIL(__VA_ARGS__)) \
+    PP_DEFER2(TF) (PP_OPT_DEPAREN(FARGS), PP_OPT_DEPAREN(PP_HEAD(__VA_ARGS__)), PP_DEFER(PP_HEAD)(PP_DEPAREN(VA_INDICES))) \
+    PP_DEFER2 ( PP_I_PAR_EACH_IDX_INDIRECT ) () (TF, FARGS, (PP_TAIL VA_INDICES), PP_TAIL(__VA_ARGS__)) \
   )
 
-#define __PP_PAR_EACH_IDX_DEFER() _PP_PAR_EACH_IDX_DEFER
+#define PP_I_PAR_EACH_IDX_INDIRECT() PP_I_PAR_EACH_IDX_DEFER
 EOH
            )
   end
@@ -345,7 +343,7 @@ EOH
 //Logical operations
 #{logical}
 
-//Lists (HEAD, TAIL, ISEMPTY etc.)
+//Lists (PP_HEAD, PP_TAIL, PP_IS_EMPTY etc.)
 #{lists}
 
 //Tuples

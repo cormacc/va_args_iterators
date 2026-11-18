@@ -31,8 +31,8 @@
  * #include "pp_enum.h"
  */
 
-#ifndef Enum_H
-#  define Enum_H
+#ifndef PP_ENUM_H
+#  define PP_ENUM_H
 
 // ----------------------------------------------------------------------------
 // Includes
@@ -61,45 +61,45 @@
 #define ENUM_UNDEFINED_TAG "UNDEFINED"
 #endif
 
-#define _ENUM_TAG_(NAME) #NAME,
+#define PP_I_ENUM_TAG(NAME) #NAME,
 
-#define _ENUM_DESCRIPTOR_DECLARATION_(NAME)           \
+#define PP_I_ENUM_DESCRIPTOR_DECLARATION(NAME)           \
   char const * NAME##_asCString(int id)
 
-#define _ENUM_DESCRIPTOR_DEFINITION_(NAME)                                    \
-  _ENUM_DESCRIPTOR_DECLARATION_(NAME) { return (unsigned)id < (unsigned)NAME##_COUNT ? NAME##_TAGS[id] : ENUM_UNDEFINED_TAG; }
+#define PP_I_ENUM_DESCRIPTOR_DEFINITION(NAME)                                    \
+  PP_I_ENUM_DESCRIPTOR_DECLARATION(NAME) { return (unsigned)id < (unsigned)NAME##_COUNT ? NAME##_TAGS[id] : ENUM_UNDEFINED_TAG; }
 
-#define ENUM(NAME) enum NAME { NAME##Tags , NAME##_COUNT }
-#define ENUM_TYPE(NAME) typedef enum { NAME##Tags , NAME##_COUNT } NAME
+#define PP_I_ENUM(NAME) enum NAME { NAME##Tags , NAME##_COUNT }
+#define PP_I_ENUM_TYPE(NAME) typedef enum { NAME##Tags , NAME##_COUNT } NAME
 
 #define TAGGED_ENUM(NAME)                       \
-  ENUM(NAME);                                   \
-  _ENUM_DESCRIPTOR_DECLARATION_(NAME)
+  PP_I_ENUM(NAME);                                   \
+  PP_I_ENUM_DESCRIPTOR_DECLARATION(NAME)
 
 #define TAGGED_ENUM_TYPE(NAME)                       \
-  ENUM_TYPE(NAME);                                   \
-  _ENUM_DESCRIPTOR_DECLARATION_(NAME)
+  PP_I_ENUM_TYPE(NAME);                                   \
+  PP_I_ENUM_DESCRIPTOR_DECLARATION(NAME)
 
 // Indirection necessary to expand NAME##Tags
-#define _ENUM_TAGS_AUTO_(IDS) PP_EACH(_ENUM_TAG_, IDS)
-#define ENUM_TAGS_AUTO(NAME)                         \
+#define PP_I_ENUM_TAGS_EXPAND(IDS) PP_EACH(PP_I_ENUM_TAG, IDS)
+#define PP_I_ENUM_TAGS_AUTO(NAME)                         \
   static char const * NAME##_TAGS[] = {         \
-    _ENUM_TAGS_AUTO_(NAME##Tags)                      \
+    PP_I_ENUM_TAGS_EXPAND(NAME##Tags)                      \
   }
 
 //Explicit array size used here to keep us honest -- i.e. ensure
 // number of tags provided matches enum member count....
-#define ENUM_TAGS_EXPLICIT(NAME, ...)               \
+#define PP_I_ENUM_TAGS_EXPLICIT(NAME, ...)               \
   static char const * NAME##_TAGS[NAME##_COUNT] = { \
     __VA_ARGS__                                     \
   }
 
 #define ENUM_DESCRIBE(NAME)                          \
-  ENUM_TAGS_AUTO(NAME);                              \
-  _ENUM_DESCRIPTOR_DEFINITION_(NAME)
+  PP_I_ENUM_TAGS_AUTO(NAME);                              \
+  PP_I_ENUM_DESCRIPTOR_DEFINITION(NAME)
 
 #define ENUM_DESCRIBE_EXPLICIT(NAME, ...)    \
-  ENUM_TAGS_EXPLICIT(NAME, __VA_ARGS__);     \
-  _ENUM_DESCRIPTOR_DEFINITION_(NAME)
+  PP_I_ENUM_TAGS_EXPLICIT(NAME, __VA_ARGS__);     \
+  PP_I_ENUM_DESCRIPTOR_DEFINITION(NAME)
 
-#endif  /* Enum_H */
+#endif  /* PP_ENUM_H */

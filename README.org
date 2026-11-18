@@ -102,6 +102,8 @@ The original implementation required separate parameterised macro sets to be def
 
 The =legacy-preprocessors= tag still has the wrapper macros and the generator method that defines them.
 
+All macros in =pp_iter.h= start with =PP_=, so that they do not clash with macros in your code. The helper macros =IF=, =NOT=, =CAT=, =EVAL=, =DEFER=, =DEFER2=, =HEAD=, =TAIL=, =EAT=, =DEPAREN=, =OPT_DEPAREN=, =IS_EMPTY=, =NOT_EMPTY=, =IS_ENCLOSED= and =IF_ENCLOSED= are renamed with a =PP_= prefix (e.g. =PP_IF=). Macros that start with =PP_I_= are internal, and can change without notice.
+
 ** Generator
 This repository includes a pre-generated header to handle up to 63 =__VA_ARGS__=. A header to handle an arbitrary number of arguments may be generated using the included generator script (written in ruby), as follows:
 

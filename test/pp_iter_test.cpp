@@ -7,74 +7,74 @@
 // Test includes
 #include <string.h>
 
-SCENARIO("NOT") {
+SCENARIO("PP_NOT") {
   GIVEN("should evaluate to 1 given 0") {
-    REQUIRE( NOT(0) == 1 );
+    REQUIRE( PP_NOT(0) == 1 );
   }
 
   GIVEN("should evaluate to 0 given 1") {
-    REQUIRE( NOT(1) == 0 );
+    REQUIRE( PP_NOT(1) == 0 );
   }
 
   GIVEN("should evaluate to 0 given >1") {
-    REQUIRE( NOT(9) == 0 );
+    REQUIRE( PP_NOT(9) == 0 );
   }
 
-#define _INDIRECT(x) x
+#define INDIRECT(x) x
   GIVEN("should evaluate to 1 given indirect 0") {
-    REQUIRE( NOT(_INDIRECT(0)) == 1 );
+    REQUIRE( PP_NOT(INDIRECT(0)) == 1 );
   }
 
   GIVEN("should evaluate to 0 given indirect 1") {
-    REQUIRE( NOT(_INDIRECT(1)) == 0 );
+    REQUIRE( PP_NOT(INDIRECT(1)) == 0 );
   }
 
   GIVEN("should evaluate to 0 given indirect >1") {
-    REQUIRE( NOT(_INDIRECT(9)) == 0 );
+    REQUIRE( PP_NOT(INDIRECT(9)) == 0 );
   }
 
   GIVEN("should handle counting 0 args") {
-    REQUIRE( NOT(PP_NARG()) == 1 );
+    REQUIRE( PP_NOT(PP_NARG()) == 1 );
   }
 
   GIVEN("should handle counting multiple args") {
-    REQUIRE( NOT(PP_NARG(1, 2, 3)) == 0 );
+    REQUIRE( PP_NOT(PP_NARG(1, 2, 3)) == 0 );
   }
 }
 
-SCENARIO("NOT_EMPTY") {
+SCENARIO("PP_NOT_EMPTY") {
   GIVEN("should evaluate to 0 given no args") {
-    REQUIRE( NOT_EMPTY() == 0 );
+    REQUIRE( PP_NOT_EMPTY() == 0 );
   }
 
   GIVEN("should evaluate to 1 given 1 arg") {
-    REQUIRE( NOT_EMPTY(3) == 1 );
+    REQUIRE( PP_NOT_EMPTY(3) == 1 );
   }
 
   GIVEN("should evaluate to 1 given multiple args") {
-    REQUIRE( NOT_EMPTY(3, b, 4) == 1 );
+    REQUIRE( PP_NOT_EMPTY(3, b, 4) == 1 );
   }
 
   GIVEN("should evaluate to 1 given quoted arg") {
-    REQUIRE( NOT_EMPTY('a') == 1 );
+    REQUIRE( PP_NOT_EMPTY('a') == 1 );
   }
 }
 
-SCENARIO("IS_EMPTY") {
+SCENARIO("PP_IS_EMPTY") {
   GIVEN("should evaluate to 1 given no args") {
-    REQUIRE( IS_EMPTY() == 1 );
+    REQUIRE( PP_IS_EMPTY() == 1 );
   }
 
   GIVEN("should evaluate to 0 given 1 arg") {
-    REQUIRE( IS_EMPTY(3) == 0 );
+    REQUIRE( PP_IS_EMPTY(3) == 0 );
   }
 
   GIVEN("should evaluate to 0 given multiple arg") {
-    REQUIRE( IS_EMPTY(3, b, 4) == 0 );
+    REQUIRE( PP_IS_EMPTY(3, b, 4) == 0 );
   }
 
   GIVEN("should evaluate to 0 given quoted arg") {
-    REQUIRE( IS_EMPTY('a') == 0 );
+    REQUIRE( PP_IS_EMPTY('a') == 0 );
   }
 }
 
@@ -249,7 +249,7 @@ SCENARIO("PP_PAR_EACH_IDX") {
   }
 
   GIVEN("stringifying macro with 2 fixed arguments") {
-#define TFEQ2FIX(FIXED_ARG1, FIXED_ARG2, ARG, ARG_IDX) REQUIRE(ARG == CAT(FIXED_ARG1, ARG_IDX));
+#define TFEQ2FIX(FIXED_ARG1, FIXED_ARG2, ARG, ARG_IDX) REQUIRE(ARG == PP_CAT(FIXED_ARG1, ARG_IDX));
     WHEN("applied") {
       test_struct tested = {.arg0 = 6, .arg1 = 5, .arg2 = 4};
       PP_PAR_EACH_IDX(TFEQ2FIX, (tested.arg, bla), 6, 5, 4);
