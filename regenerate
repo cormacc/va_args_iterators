@@ -1,2 +1,7 @@
-rm pp_iter.h
-ruby pp_iterators.rb $@ > pp_iter.h
+#!/bin/sh
+# Regenerate pp_iter.h. Extra arguments go to the generator, e.g. --limit 127.
+# The output goes to a temporary file first, so that a failed run keeps the existing header.
+set -e
+cd "$(dirname "$0")"
+ruby pp_iterators.rb "$@" > pp_iter.h.tmp || { rm -f pp_iter.h.tmp; exit 1; }
+mv pp_iter.h.tmp pp_iter.h

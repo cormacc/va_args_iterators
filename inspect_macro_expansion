@@ -1,1 +1,4 @@
-gcc -I . -I ./vendor/catch -E test/pp_iter_test.cpp
+#!/bin/sh
+# Print the preprocessed unit-test source, to inspect macro expansion.
+cd "$(dirname "$0")"
+exec gcc -I . -I ./vendor/catch -E test/pp_iter_test.cpp
