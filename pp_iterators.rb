@@ -43,7 +43,9 @@ class PPIterators
   MAX_ARG_COUNT_DEFAULT = 63
 
   attr_reader :nargs_max
+  # EVAL needs at least one expansion level, which ceil(log2(nargs_max)) gives only from 2
   def initialize(nargs_max: MAX_ARG_COUNT_DEFAULT)
+    raise ArgumentError, "nargs_max must be an integer of at least 2 (got #{nargs_max.inspect})" unless nargs_max.is_a?(Integer) && nargs_max >= 2
     @nargs_max = nargs_max
   end
 
@@ -407,6 +409,10 @@ if __FILE__==$0
       nargs_max = n
     end
   end.parse!
-  ppi = PPIterators.new(nargs_max: nargs_max)
+  begin
+    ppi = PPIterators.new(nargs_max: nargs_max)
+  rescue ArgumentError => e
+    abort "pp_iterators.rb: --limit: #{e.message}"
+  end
   puts ppi.generate_header
 end
