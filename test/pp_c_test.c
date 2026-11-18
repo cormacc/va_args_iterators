@@ -37,10 +37,26 @@ PP_PAR_EACH_IDX(DECL_PAR, (long), par_a, par_b)
 static int sum3(int a, int b, int c) { return a + b + c; }
 #define ID(A) A
 
-#define ColourTags RED, GREEN, BLUE
+#define ColourIDs RED, GREEN, BLUE
 TAGGED_ENUM(Colour);
 ENUM_DESCRIBE(Colour);
 CHECK(enum_count, Colour_COUNT == 3)
+CHECK(enum_max, ENUM_MAX(Colour) == BLUE)
+
+// An extension with one member: the generated list must not end in a stray comma
+#define ShadeIDs GREY
+TAGGED_ENUM_EXTEND(Colour, Shade);
+EXTENDED_ENUM_DESCRIBE(Colour, Shade);
+CHECK(extend_one_first, (int)GREY == (int)Colour_COUNT)
+CHECK(extend_one_count, (int)Shade_COUNT == (int)Colour_COUNT + 1)
+
+#define HueIDs CYAN, MAGENTA
+ENUM_TYPE_EXTEND(Colour, Hue);
+CHECK(extend_two, (int)MAGENTA == (int)Colour_COUNT + 1 && (int)Hue_COUNT == (int)Colour_COUNT + 2)
+
+static int RED_ = 10, GREEN_ = 20, BLUE_ = 30;
+static int * const colour_values[] = ENUMERATED_ARRAY(Colour);
+CHECK(enumerated_array_size, sizeof(colour_values) / sizeof(colour_values[0]) == Colour_COUNT)
 
 static int failures = 0;
 static void expect(int ok, const char *what) {
@@ -55,6 +71,17 @@ int main(void) {
   expect(strcmp(Colour_asCString(GREEN), "GREEN") == 0, "ENUM_DESCRIBE tags");
   expect(strcmp(Colour_asCString(Colour_COUNT), ENUM_UNDEFINED_TAG) == 0, "upper bound");
   expect(strcmp(Colour_asCString(-1), ENUM_UNDEFINED_TAG) == 0, "negative id");
+  expect(Colour_fromCString("BLUE") == BLUE, "fromCString finds a member");
+  expect(Colour_fromCString("PINK") == ENUM_UNKNOWN(Colour), "fromCString of an unknown tag");
+  expect(strcmp(Shade_asCString(GREEN), "GREEN") == 0, "extended descriptor covers the base");
+  expect(strcmp(Shade_asCString(GREY), "GREY") == 0, "extended descriptor covers the extension");
+  expect(Shade_fromCString("GREY") == GREY, "extended decoder");
+  expect(*colour_values[GREEN] == 20, "ENUMERATED_ARRAY maps members to elements");
+  {
+    int visited = 0;
+    ENUM_EACH(Colour, id, visited += id + 1)
+    expect(visited == 1 + 2 + 3, "ENUM_EACH visits each member");
+  }
   if (failures == 0) printf("All C checks passed\n");
   return failures != 0;
 }

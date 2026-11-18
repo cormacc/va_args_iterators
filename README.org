@@ -165,13 +165,17 @@ Because the include guards are the same, a standalone =pp_iter.h= included after
 * Usage example :: auto-generation of string descriptors for an enum type
   The file [[file:pp_enum.h][pp_enum.h]] uses =PP_EACH= to support autogeneration of textual descriptions of enum members. This saves some repetition and eliminates the risk of forgetting to update the tag when adding/re-arranging members.
 
+  The member list is a macro named =<Name>IDs=: it holds the identifiers of the members (C calls them enumerators). The tags are the strings that the macros make from them.
+
+  Versions before 2026-11-18 named the list =<Name>Tags=. To upgrade, rename each =#define <Name>Tags= to =#define <Name>IDs=; nothing else refers to the list. =TAGGED_ENUM= and the other declaring macros now also declare =<Name>_fromCString=, which =ENUM_DESCRIBE= defines.
+
 ** my_tagged_enum.h
 
 *** Untyped enum
 
 #+BEGIN_SRC c
   #include "pp_enum.h"
-  #define FavouritePiperTags                   \
+  #define FavouritePiperIDs                    \
       WILLIE_CLANCY,                          \
       SEAMUS_ENNIS,                           \
       TOMMY_RECK
@@ -182,12 +186,6 @@ Because the include guards are the same, a standalone =pp_iter.h= included after
  ... which expands to ...
 
 #+BEGIN_SRC c
-  #include "pp_enum.h"
-  #define FavouritePiperTags                   \
-      WILLIE_CLANCY,                          \
-      SEAMUS_ENNIS,                           \
-      TOMMY_RECK
-
   enum FavouritePiper {
       WILLIE_CLANCY,
       SEAMUS_ENNIS,
@@ -196,29 +194,24 @@ Because the include guards are the same, a standalone =pp_iter.h= included after
   };
 
   char const * FavouritePiper_asCString(int id);
+  int FavouritePiper_fromCString(char const * tag);
 #+END_SRC
 
 *** Typed enum
 
 #+BEGIN_SRC c
   #include "pp_enum.h"
-  #define FavouritePiperTags                    \
+  #define FavouritePiperIDs                     \
       WILLIE_CLANCY,                           \
       SEAMUS_ENNIS,                            \
       TOMMY_RECK
 
   TAGGED_ENUM_TYPE(FavouritePiper);
-    #+END_SRC
+#+END_SRC
 
-    ... which expands to ...
+... which expands to ...
 
 #+BEGIN_SRC c
-  #include "pp_enum.h"
-  #define FavouritePiperTags                    \
-      WILLIE_CLANCY,                           \
-      SEAMUS_ENNIS,                            \
-      TOMMY_RECK
-
   typedef enum {
       WILLIE_CLANCY,
       SEAMUS_ENNIS,
@@ -227,7 +220,10 @@ Because the include guards are the same, a standalone =pp_iter.h= included after
   } FavouritePiper;
 
   char const * FavouritePiper_asCString(int id);
+  int FavouritePiper_fromCString(char const * tag);
 #+END_SRC
+
+=ENUM(FavouritePiper)= and =ENUM_TYPE(FavouritePiper)= create the same enum without the function declarations.
 
 ** my_tagged_enum.c
 
@@ -241,19 +237,20 @@ Assuming =my_tagged_enum.h= contains the listing provided above for either the t
   ENUM_DESCRIBE(FavouritePiper);
 #+END_SRC
 
-    ... which expands to ...
+... which expands to ...
 
 #+BEGIN_SRC c
-  #include "my_tagged_enum.h"
-
   static char const * FavouritePiper_TAGS[] = {
       "WILLIE_CLANCY",
       "SEAMUS_ENNIS",
       "TOMMY_RECK",
   };
 
-  char const * FavouritePiper_asCString(int id) { return id < FavouritePiper_COUNT ? FavouritePiper_TAGS[id] : "UNDEFINED"; }
-    #+END_SRC
+  char const * FavouritePiper_asCString(int id) { return (unsigned)id < (unsigned)FavouritePiper_COUNT ? FavouritePiper_TAGS[id] : "UNDEFINED"; }
+  int FavouritePiper_fromCString(char const * tag) { /* strcmp against each tag; FavouritePiper_COUNT if none matches */ }
+#+END_SRC
+
+=FavouritePiper_fromCString= uses =strcmp=, so =pp_enum.h= includes =<string.h>=.
 
 *** Custom tag definition
 This sacrifices the protection against re-arrangement of members. The tag array has one entry for each enum member, so the compiler warns if there are more tags than members. It does not warn if there are fewer: the missing tags are null pointers.
@@ -271,16 +268,27 @@ This sacrifices the protection against re-arrangement of members. The tag array 
 ... which expands to ...
 
 #+BEGIN_SRC c
-  #include "my_tagged_enum.h"
-
   static char const * FavouritePiper_TAGS[FavouritePiper_COUNT] = {
       "Willie Clancy",
       "Seamus Ennis",
       "Tommy Reck"
   };
 
-  char const * FavouritePiper_asCString(int id) { return id < FavouritePiper_COUNT ? FavouritePiper_TAGS[id] : "UNDEFINED"; }
+  char const * FavouritePiper_asCString(int id) { return (unsigned)id < (unsigned)FavouritePiper_COUNT ? FavouritePiper_TAGS[id] : "UNDEFINED"; }
+  int FavouritePiper_fromCString(char const * tag) { /* as above, against the explicit tags */ }
 #+END_SRC
+
+** Further enum macros
+| Macro | Result |
+|-|-|
+| =ENUM_COUNT(Name)=, =ENUM_MAX(Name)= | =Name_COUNT= and =Name_COUNT - 1= |
+| =ENUM_UNKNOWN(Name)= | the value that =Name_fromCString= returns for an unknown tag (=Name_COUNT=) |
+| =ENUM_DESCRIPTOR(Name)=, =ENUM_DECODER(Name)= | the function names =Name_asCString= and =Name_fromCString= |
+| =ENUM_EACH(Name, id, statements)= | runs the statements once for each member, with =int id= from 0 |
+| =ENUM_EXTEND(Base, Ext)=, =ENUM_TYPE_EXTEND=, =TAGGED_ENUM_EXTEND=, =TAGGED_ENUM_TYPE_EXTEND= | an enum whose members, from =ExtIDs=, continue after =Base_COUNT= |
+| =EXTENDED_ENUM_DESCRIBE(Base, Ext)= | =Ext_asCString= and =Ext_fromCString=, which also cover the members of =Base= |
+| =ENUMERATED_ARRAY(Name)= | ={ &WILLIE_CLANCY_, &SEAMUS_ENNIS_, ... }=: one element address for each member, in member order. =ELNAME(WILLIE_CLANCY)= names an element (=WILLIE_CLANCY_=). |
+| =ENUMERATED_ARRAY_CAST(Name, T)= | the same, with each address cast to =T= |
 
 
 * Unit tests
@@ -305,7 +313,7 @@ The Nix flake supplies a development shell with CMake, GCC, Clang and Ruby. Run 
   ctest --preset gcc
 #+end_src
 
-All tests should pass. Run =./build/gcc/tests= for the Catch2 report (71 assertions in 9 test cases). Replace =gcc= with =clang= to build and test with Clang.
+All tests should pass. Run =./build/gcc/tests= for the Catch2 report (95 assertions in 11 test cases). Replace =gcc= with =clang= to build and test with Clang.
 
 ** Continuous integration
 The GitHub Actions workflow [[./.github/workflows/ci.yml]] runs the =gcc= and =clang= presets on Linux, in the Nix development shell, and the =msvc= preset on Windows.
