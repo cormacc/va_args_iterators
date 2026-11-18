@@ -29,3 +29,12 @@ set_target_properties(c_tests PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED ON C_
 target_include_directories(c_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(c_tests PRIVATE "$<$<C_COMPILER_ID:MSVC>:/Zc:preprocessor>")
 add_test(NAME c_tests COMMAND c_tests)
+
+# The committed pp_iter.h must match the generator output. Needs Ruby (provided by the Nix devShell).
+find_program(RUBY ruby)
+if(RUBY)
+  add_test(NAME header_up_to_date
+           COMMAND ${CMAKE_COMMAND} -DRUBY=${RUBY} -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+                   -DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/pp_iter.generated.h
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/test/check_header.cmake)
+endif()
