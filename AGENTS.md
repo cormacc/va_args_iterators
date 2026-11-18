@@ -11,7 +11,10 @@ Run all commands in the Nix devShell (`flake.nix`: cmake, ruby, stdenv gcc, and 
 # CTest runs tests (C++20, Catch2 v2.13.9 in vendor/catch), c_tests (strict C99) and header_up_to_date
 for p in gcc clang; do cmake --preset $p && cmake --build --preset $p && ctest --preset $p; done
 ./build/gcc/tests                 # Catch2 report
-cmake --list-presets              # available presets
+cmake --list-presets              # available presets (msvc: Windows only)
+
+# Quick MSVC check on Compiler Explorer (sends the source to godbolt.org; needs network)
+tools/compiler_explorer.rb        # test/pp_c_test.c as C and C++ with the latest MSVC
 
 # Regenerate pp_iter.h (default limit 63 args); extra args pass through to the generator
 ./regenerate                      # = ruby pp_iterators.rb "$@" > pp_iter.h
@@ -24,7 +27,9 @@ ruby pp_iterators.rb --limit 127 > pp_iter.h
 
 `CMakeLists.txt` declares `cmake_minimum_required(VERSION 3.21...4.4)`: 3.21 is the first version that reads `CMakePresets.json` version 3, which does not need a `generator`, and 4.4 is the newest version tested. Raise the upper bound when you test a newer CMake. The expected result is `All tests passed (71 assertions in 9 test cases)`.
 
-Generation is deterministic. The CTest test `header_up_to_date` (`test/check_header.cmake`, added when CMake finds Ruby) fails if `pp_iter.h` differs from the generator output.
+CI: `.github/workflows/ci.yml` runs the `gcc` and `clang` presets on ubuntu-latest through `nix develop`, and the `msvc` preset on windows-latest. Validate a workflow change with `nix run nixpkgs#actionlint -- .github/workflows/ci.yml`.
+
+Generation is deterministic. The CTest test `header_up_to_date` (`test/check_header.cmake`, added when CMake finds Ruby) fails if `pp_iter.h` differs from the generator output; it ignores line endings, because a Windows checkout has CRLF.
 
 ## Task memory
 

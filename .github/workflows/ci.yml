@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # GCC and Clang from the Nix devShell, so that CI uses the same compilers as local development.
+  linux:
+    name: ${{ matrix.preset }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: cachix/install-nix-action@v31
+      - name: Configure
+        run: nix develop --command cmake --preset ${{ matrix.preset }}
+      - name: Build
+        run: nix develop --command cmake --build --preset ${{ matrix.preset }}
+      - name: Test
+        run: nix develop --command ctest --preset ${{ matrix.preset }}
+
+  # MSVC from the runner's Visual Studio installation. CMakeLists.txt adds /Zc:preprocessor.
+  msvc:
+    name: msvc
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure
+        run: cmake --preset msvc
+      - name: Build
+        run: cmake --build --preset msvc
+      - name: Test
+        run: ctest --preset msvc

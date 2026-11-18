@@ -13,14 +13,22 @@
       "displayName": "Clang",
       "binaryDir": "${sourceDir}/build/clang",
       "cacheVariables": { "CMAKE_C_COMPILER": "clang", "CMAKE_CXX_COMPILER": "clang++" }
+    },
+    {
+      "name": "msvc",
+      "displayName": "MSVC (Visual Studio generator, Windows only)",
+      "binaryDir": "${sourceDir}/build/msvc",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
     }
   ],
   "buildPresets": [
     { "name": "gcc", "configurePreset": "gcc" },
-    { "name": "clang", "configurePreset": "clang" }
+    { "name": "clang", "configurePreset": "clang" },
+    { "name": "msvc", "configurePreset": "msvc", "configuration": "Release" }
   ],
   "testPresets": [
     { "name": "gcc", "configurePreset": "gcc", "output": { "outputOnFailure": true } },
-    { "name": "clang", "configurePreset": "clang", "output": { "outputOnFailure": true } }
+    { "name": "clang", "configurePreset": "clang", "output": { "outputOnFailure": true } },
+    { "name": "msvc", "configurePreset": "msvc", "configuration": "Release", "output": { "outputOnFailure": true } }
   ]
 }

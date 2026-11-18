@@ -8,7 +8,7 @@ if(NOT generate_result EQUAL 0)
   message(FATAL_ERROR "pp_iterators.rb failed: ${generate_result}")
 endif()
 execute_process(
-  COMMAND "${CMAKE_COMMAND}" -E compare_files "${OUTPUT}" "${SOURCE_DIR}/pp_iter.h"
+  COMMAND "${CMAKE_COMMAND}" -E compare_files --ignore-eol "${OUTPUT}" "${SOURCE_DIR}/pp_iter.h"
   RESULT_VARIABLE compare_result)
 if(NOT compare_result EQUAL 0)
   message(FATAL_ERROR "pp_iter.h is out of date: run ./regenerate and commit the result")
